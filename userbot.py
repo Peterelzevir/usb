@@ -6,9 +6,13 @@ from telethon.tl.types import InputPeerChannel
 
 logging.basicConfig(level=logging.INFO)
 
+# Replace these with your actual API ID and hash
+api_id = '23207350'
+api_hash = '03464b6c80a5051eead6835928e48189'
+
 # Masukkan string session Anda
 string_session = '1BVtsOGcBuyhbhUbKGA1M09zrT9e4XpDCnv1_xs_24nYGMuNyGgEhzNYERCwiHM9Z2ViLegoWwGgRfKuIsZ-NZ84KNLMZS-wNfO8ERF6lhqHY0Qoxg7bPNlAL5aKuEWMLPJTXptBaSi_Glcihem_7FmrVgLhbwQwQSKKri5UeM-GN-Fy6s1qaVRg5KX-rw-4-2nEHEObwlpVXPbiuIzwGfCi-5zKlc9EZuHtHOTxzrjy02jOgika3D4VuEIBaTewJNpmAdorV0tWTb6-V1MPEQMGo_4kQzAi_Wkxqn5ASZgQJzH3SexjOzJ3LAjK36sQwP4zha5zJ8S5ZEST8Hl9pDW_MpZkinYM='
-client = TelegramClient('session_name', api_id=23207350, api_hash=03464b6c80a5051eead6835928e48189).start(bot_token=string_session)
+client = TelegramClient('session_name', api_id=api_id, api_hash=api_hash).start(bot_token=string_session)
 
 forward_list = []  # List pesan yang akan di forward
 delay_settings = 60  # Default delay dalam detik
