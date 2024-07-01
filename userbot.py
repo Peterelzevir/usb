@@ -402,14 +402,5 @@ async def auto_forward():
                         await asyncio.sleep(delay_settings)
         await asyncio.sleep(1)
 
-@client.on(events.NewMessage(pattern='/forward'))
-async def start_forward(event):
-    if event.sender_id == int(admin_id):
-        await event.respond('▶️ *Pengiriman pesan otomatis dimulai.*', parse_mode='Markdown')
-        await auto_forward()
-    else:
-        await event.respond('❌ *Anda tidak memiliki akses untuk menggunakan bot ini.*', parse_mode='Markdown')
-    raise events.StopPropagation
-
 client.start()
 client.run_until_disconnected()
