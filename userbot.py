@@ -2,8 +2,7 @@ import logging
 import time
 import asyncio
 from telethon import TelegramClient, events
-from telethon.tl.functions.messages import GetAllChats
-from telethon.tl.types import InputMediaPhoto, InputMediaVideo, InputMediaDocument, InputMediaGif, InputMediaAudio
+from telethon.tl.types import InputPeerChannel
 
 logging.basicConfig(level=logging.INFO)
 
@@ -83,10 +82,9 @@ async def check_list(event):
 
 @client.on(events.NewMessage(pattern='/groups'))
 async def list_groups(event):
-    result = await client(GetAllChats([]))
-    groups = [dialog.title for dialog in result.chats if getattr(dialog, 'megagroup', False)]
-    response = 'Grup yang diikuti bot:\n' + '\n'.join(groups)
-    await event.respond(response)
+    async for dialog in client.iter_dialogs():
+        if dialog.is_group:
+            await event.respond(f'Grup: {dialog.name}')
     raise events.StopPropagation
 
 @client.on(events.NewMessage(pattern='/checkspeed'))
@@ -115,23 +113,22 @@ async def stop(event):
 async def forward_messages():
     while True:
         if is_forwarding and forward_list:
-            result = await client(GetAllChats([]))
-            groups = [dialog for dialog in result.chats if getattr(dialog, 'megagroup', False)]
-            for group in groups:
-                for msg in forward_list:
-                    if msg.photo:
-                        await client.send_file(group, msg.photo, caption=msg.text)
-                    elif msg.video:
-                        await client.send_file(group, msg.video, caption=msg.text)
-                    elif msg.document:
-                        await client.send_file(group, msg.document, caption=msg.text)
-                    elif msg.gif:
-                        await client.send_file(group, msg.gif, caption=msg.text)
-                    elif msg.audio:
-                        await client.send_file(group, msg.audio, caption=msg.text)
-                    else:
-                        await client.send_message(group, msg.text)
-                    await asyncio.sleep(delay_settings)
+            async for dialog in client.iter_dialogs():
+                if dialog.is_group:
+                    for msg in forward_list:
+                        if msg.photo:
+                            await client.send_file(dialog.id, msg.photo, caption=msg.text)
+                        elif msg.video:
+                            await client.send_file(dialog.id, msg.video, caption=msg.text)
+                        elif msg.document:
+                            await client.send_file(dialog.id, msg.document, caption=msg.text)
+                        elif msg.gif:
+                            await client.send_file(dialog.id, msg.gif, caption=msg.text)
+                        elif msg.audio:
+                            await client.send_file(dialog.id, msg.audio, caption=msg.text)
+                        else:
+                            await client.send_message(dialog.id, msg.text)
+                        await asyncio.sleep(delay_settings)
         await asyncio.sleep(1)
 
 async def main():
