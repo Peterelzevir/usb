@@ -16,7 +16,7 @@ logging.basicConfig(level=logging.INFO)
 api_id = '28356794' #ganti api id mu
 api_hash = 'a581331dabc5d4b7e0c7381a97dde824' #ganti dengan api_hash mu
 string_session = '1BVtsOGcBu5uEA0k29aCSrBvDPXZ8WXHIGdwp2chGoIw6GLDwZLBDnPu6xH7ocvb1pASn3sCHRUZZ_mo4oKrVvdMGdJ6zY2srwbmmENO97drhEYAW8AOknk-O5Gqvxs6j4xQQnQ8KrpBSK-xCoKUUIDl7rFG9yHawzs5KfqUXh1b8pPpPO8j6dAvWNARpLMOLa_qt7I46QZcgRjbxFa6rMpOutgiBObv24v93Hyefd0uWhhFuObb9ORgovcfVuJy5VGUsdmhlngv1jz-Vk8HqmNaKSM73kvgctbeIFXVbwnqRdPkYLVA49q_0d6YubcFnrqazkPwtlJxxY57CedOUfoO72G67DCc=' #string session telethon mu
-admin_id = 'id_akun_admin_telegramu' #ganti dengan id admin yg kamu mau
+admin_id = '1368459498' #ganti dengan id admin yg kamu mau
 
 client = TelegramClient(StringSession(string_session), api_id, api_hash)
 clone_clients = {}
