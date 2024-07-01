@@ -1,6 +1,3 @@
-//source code by @hiyaok
-//notforesale
-
 import logging
 import time
 import asyncio
