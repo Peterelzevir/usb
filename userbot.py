@@ -189,9 +189,9 @@ def load_forward_list():
     try:
         with open('forward_list.json', 'r', encoding='utf-8') as file:
             return json.load(file)
-    except FileNotFoundError:
+    except (FileNotFoundError, json.JSONDecodeError):
         return []
-
+        
 forward_list = load_forward_list()
 
 @client.on(events.NewMessage(pattern='/delforward'))
