@@ -115,9 +115,31 @@ async def add_clone(event):
         await event.respond('Anda tidak memiliki akses untuk menggunakan bot ini.', parse_mode='Markdown')
     raise events.StopPropagation
 
-@client.on(events.NewMessage(pattern='/deleteclone')) async def delete_clone(event): if event.sender_id == int(admin_id): try: admin_id = event.message.text.split()[1] with sqlite3.connect('userbot.db') as conn: c = conn.cursor() c.execute("DELETE FROM clones WHERE admin_id = ?", (admin_id,)) conn.commit() await event.respond('Clone bot telah dihapus.', parse_mode='Markdown') except (IndexError, sqlite3.Error) as e: await event.respond('Format salah atau terjadi kesalahan!', parse_mode='Markdown') else: await event.respond('Anda tidak memiliki akses untuk menggunakan bot ini.', parse_mode='Markdown') raise events.StopPropagation
+@client.on(events.NewMessage(pattern='/deleteclone'))
+async def delete_clone(event):
+    if event.sender_id == int(admin_id):
+        try:
+            clone_admin_id = event.message.text.split()[1]
+            with sqlite3.connect('userbot.db') as conn:
+                c = conn.cursor()
+                c.execute("DELETE FROM clones WHERE admin_id = ?", (clone_admin_id,))
+                conn.commit()
+            await event.respond('Clone bot telah dihapus.', parse_mode='Markdown')
+        except (IndexError, sqlite3.Error) as e:
+            await event.respond('Format salah atau terjadi kesalahan!', parse_mode='Markdown')
+    else:
+        await event.respond('Anda tidak memiliki akses untuk menggunakan bot ini.', parse_mode='Markdown')
+    raise events.StopPropagation
 
-@client.on(events.NewMessage(pattern='/runtime')) async def runtime(event): if event.sender_id == int(admin_id): current_time = datetime.now() uptime = current_time - start_time await event.respond(f'Bot telah berjalan selama: {uptime}.', parse_mode='Markdown') else: await event.respond('Anda tidak memiliki akses untuk menggunakan bot ini.', parse_mode='Markdown') raise events.StopPropagation
+@client.on(events.NewMessage(pattern='/runtime'))
+async def runtime(event):
+    if event.sender_id == int(admin_id):
+        current_time = datetime.now()
+        uptime = current_time - start_time
+        await event.respond(f'Bot telah berjalan selama: {uptime}.', parse_mode='Markdown')
+    else:
+        await event.respond('Anda tidak memiliki akses untuk menggunakan bot ini.', parse_mode='Markdown')
+    raise events.StopPropagation
 
 @client.on(events.NewMessage(pattern='/help'))
 async def help(event):
