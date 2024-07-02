@@ -6,9 +6,11 @@ from telethon.tl.types import (MessageEntityBold, MessageEntityItalic, MessageEn
                                MessageEntityPre, MessageEntityUnderline, MessageEntityTextUrl, 
                                MessageEntityStrike, InputMediaPhoto, InputMediaDocument)
 from telethon.errors.rpcerrorlist import PhoneNumberInvalidError
-from config import api_id, api_hash, main_admin_username
 
 # Inisialisasi client
+api_id = '28356794'
+api_hash = 'a581331dabc5d4b7e0c7381a97dde824'
+main_admin_username = 'hiyaok'  # Ganti dengan username admin utama Anda
 client = TelegramClient('userbot', api_id, api_hash)
 
 # Path file JSON untuk menyimpan pesan dan clones
@@ -62,13 +64,14 @@ async def help(event):
     help_text = """
     Fitur-fitur bot:
     1. .start - Menyapa pengguna.
-    2. .add - Menyimpan pesan yang di-reply ke file JSON.
-    3. .mulai - Memulai pengiriman pesan ke semua grup.
-    4. .setdelay (index) (waktu) - Menyetel jeda waktu pengiriman pesan.
-    5. .stop - Menghentikan pengiriman pesan.
-    6. .clone - Membuat clone userbot.
-    7. .listclone - Menampilkan daftar clone userbot.
-    8. .delclone - Menghapus clone userbot.
+    2. .help - Menampilkan pesan bantuan.
+    3. .add - Menyimpan pesan yang di-reply ke file JSON.
+    4. .mulai - Memulai pengiriman pesan ke semua grup.
+    5. .setdelay (index) (waktu) - Menyetel jeda waktu pengiriman pesan.
+    6. .stop - Menghentikan pengiriman pesan.
+    7. .clone (api_id) (api_hash) (nomor_telepon) - Membuat clone userbot.
+    8. .listclone - Menampilkan daftar clone userbot.
+    9. .delclone (nomor_telepon) - Menghapus clone userbot.
     """
     await event.reply(help_text)
 
@@ -145,7 +148,7 @@ async def create_clone_userbot(api_id, api_hash, phone, main_admin_username):
         return None
 
 # Fitur untuk membuat clone userbot
-@client.on(events.NewMessage(pattern=r'^\.clone (\d+) (\d+) (\d+)$'))
+@client.on(events.NewMessage(pattern=r'^\.clone (\d+) (\w+) (\d+)$'))
 async def clone_userbot(event):
     if not await is_admin(event):
         return
