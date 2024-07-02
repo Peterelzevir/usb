@@ -34,25 +34,6 @@ def init_db():
 
 init_db()
 
-forward_list_file = 'forward_list.json'
-delay_settings = 60
-is_forwarding = False
-
-# Load forward list from JSON file
-def load_forward_list():
-    try:
-        with open(forward_list_file, 'r') as file:
-            return json.load(file)
-    except (FileNotFoundError, json.JSONDecodeError):
-        return []
-
-# Save forward list to JSON file
-def save_forward_list(forward_list):
-    with open(forward_list_file, 'w') as file:
-        json.dump(forward_list, file, indent=4)
-
-forward_list = load_forward_list()
-
 async def create_clone(api_id, api_hash, string_session, admin_id, expiry_date):
     clone_client = TelegramClient(StringSession(string_session), api_id, api_hash)
     await clone_client.start()
@@ -182,13 +163,14 @@ async def add_forward(event):
             reply_msg = await event.get_reply_message()
             caption = reply_msg.text if reply_msg.text else None
             if reply_msg.media:
-                forward_list.append({
+                forward_item = {
                     'id': reply_msg.id,
-                    'message': reply_msg.text,
+                    'message': reply_msg.text if reply_msg.text else '',
                     'media': reply_msg.media,
-                    'caption': caption,
+                    'caption': caption if caption else '',
                     'delay': delay_settings  # Default delay
-                })
+                }
+                forward_list.append(forward_item)
                 save_forward_list(forward_list)
                 await event.respond('Pesan telah ditambahkan untuk di-forward.', parse_mode='Markdown')
             else:
@@ -198,6 +180,19 @@ async def add_forward(event):
     else:
         await event.respond('Anda tidak memiliki akses untuk menggunakan bot ini.', parse_mode='Markdown')
     raise events.StopPropagation
+
+def save_forward_list(forward_list):
+    with open('forward_list.json', 'w', encoding='utf-8') as file:
+        json.dump(forward_list, file, ensure_ascii=False, indent=4)
+
+def load_forward_list():
+    try:
+        with open('forward_list.json', 'r', encoding='utf-8') as file:
+            return json.load(file)
+    except FileNotFoundError:
+        return []
+
+forward_list = load_forward_list()
 
 @client.on(events.NewMessage(pattern='/delforward'))
 async def del_forward(event):
@@ -243,7 +238,7 @@ async def check_list(event):
         if forward_list:
             message = 'Daftar pesan untuk di forward:\n\n'
             for idx, item in enumerate(forward_list, start=1):
-                message += f"{idx}. Pesan: {item['message']}\n   Delay: {item['delay']} detik\n\n"
+                message += f"{idx}. Pesan: {item['message']}\n   Media: {bool(item['media'])}\n   Caption: {item['caption']}\n   Delay: {item['delay']} detik\n\n"
             await event.respond(message, parse_mode='Markdown')
         else:
             await event.respond('Daftar pesan untuk di forward masih kosong.', parse_mode='Markdown')
@@ -411,53 +406,33 @@ async def unmute_member(event):
     raise events.StopPropagation
 
 @client.on(events.NewMessage(pattern='/mulai'))
-async def mulai(event):
-    global is_forwarding
+async def start_forward(event):
     if event.sender_id == int(admin_id):
-        if is_forwarding:
-            await event.respond('Pengiriman pesan otomatis sudah berjalan.')
-            return
-        is_forwarding = True
-        await event.respond('Pengiriman pesan otomatis dimulai.')
-
-        forward_list = load_forward_list()
-        groups = await client.get_dialogs()
-        group_ids = [dialog.id for dialog in groups if dialog.is_group]
-
-        while is_forwarding:
-            for item in forward_list:
-                for group_id in group_ids:
-                    try:
-                        if item['media']:
-                            if isinstance(item['media'], MessageMediaPhoto):
-                                await client.send_file(group_id, item['media'], caption=item['caption'])
-                            elif isinstance(item['media'], MessageMediaDocument):
-                                await client.send_file(group_id, item['media'], caption=item['caption'])
-                        else:
-                            await client.send_message(group_id, item['message'])
-                    except Exception as e:
-                        logging.error(f'Gagal mengirim pesan ke grup {group_id}: {e}')
-
-                await asyncio.sleep(item['delay'])
-
-            await asyncio.sleep(1)
+        async def forward_messages():
+            while True:
+                for item in forward_list:
+                    for group in await client.get_dialogs():
+                        if group.is_group:
+                            if item['media']:
+                                await client.send_file(group, item['media'], caption=item['caption'])
+                            else:
+                                await client.send_message(group, item['message'], parse_mode='Markdown')
+                            await asyncio.sleep(item['delay'])
+        asyncio.create_task(forward_messages())
+        await event.respond('Pengiriman pesan ke seluruh grup telah dimulai.', parse_mode='Markdown')
     else:
         await event.respond('Anda tidak memiliki akses untuk menggunakan bot ini.', parse_mode='Markdown')
-
     raise events.StopPropagation
 
 @client.on(events.NewMessage(pattern='/stop'))
-async def stop(event):
-    global is_forwarding
+async def stop_forward(event):
     if event.sender_id == int(admin_id):
-        if not is_forwarding:
-            await event.respond('Pengiriman pesan otomatis tidak sedang berjalan.')
-            return
-        is_forwarding = False
-        await event.respond('Pengiriman pesan otomatis dihentikan.')
+        for task in asyncio.all_tasks():
+            if task.get_name() == 'forward_messages':
+                task.cancel()
+        await event.respond('Pengiriman pesan ke seluruh grup telah dihentikan.', parse_mode='Markdown')
     else:
         await event.respond('Anda tidak memiliki akses untuk menggunakan bot ini.', parse_mode='Markdown')
-
     raise events.StopPropagation
 
 @client.on(events.NewMessage(pattern='/listclone'))
