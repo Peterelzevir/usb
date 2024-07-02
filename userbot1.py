@@ -1,7 +1,7 @@
 import json
 import asyncio
 from telethon import TelegramClient, events
-from telethon.tl.types import MessageMediaPhoto, MessageMediaDocument, MessageMediaVideo
+from telethon.tl.types import MessageMediaPhoto, MessageMediaDocument
 import os
 
 # Konfigurasi API Telegram
@@ -57,12 +57,7 @@ async def add(event):
             'caption': reply.raw_text
         }
         if reply.media:
-            if isinstance(reply.media, MessageMediaPhoto):
-                message_data['media'] = reply.media.photo
-            elif isinstance(reply.media, MessageMediaDocument):
-                message_data['media'] = reply.media.document
-            elif isinstance(reply.media, MessageMediaVideo):
-                message_data['media'] = reply.media.video
+            message_data['media'] = reply.media
         
         messages.append(message_data)
         
