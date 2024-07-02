@@ -12,8 +12,8 @@ from config import api_id, api_hash, main_admin_username
 client = TelegramClient('userbot', api_id, api_hash)
 
 # Path file JSON untuk menyimpan pesan dan clones
-JSON_FILE_PATH = 'messages.json'
-CLONES_FILE_PATH = 'clones.json'
+JSON_FILE_PATH = 'pesan.json'
+CLONES_FILE_PATH = 'clone.json'
 
 # Fungsi untuk memuat pesan dari file JSON
 def load_messages():
