@@ -6,14 +6,14 @@ from telethon.tl.types import (MessageEntityBold, MessageEntityItalic, MessageEn
                                MessageEntityPre, MessageEntityUnderline, MessageEntityTextUrl, 
                                MessageEntityStrike, InputMediaPhoto, InputMediaDocument)
 from telethon.errors.rpcerrorlist import PhoneNumberInvalidError
-from config import api_id, api_hash, main_admin_id
+from config import api_id, api_hash, main_admin_username
 
 # Inisialisasi client
 client = TelegramClient('userbot', api_id, api_hash)
 
 # Path file JSON untuk menyimpan pesan dan clones
-JSON_FILE_PATH = 'pesan.json'
-CLONES_FILE_PATH = 'clone.json'
+JSON_FILE_PATH = 'messages.json'
+CLONES_FILE_PATH = 'clones.json'
 
 # Fungsi untuk memuat pesan dari file JSON
 def load_messages():
@@ -44,16 +44,21 @@ messages = load_messages()
 clones = load_clones()
 
 # Fungsi untuk memeriksa apakah pengirim adalah admin
-def is_admin(event):
-    return event.sender_id == int(main_admin_id)
+async def is_admin(event):
+    sender = await event.get_sender()
+    return sender.username == main_admin_username
 
-@client.on(events.NewMessage(pattern='^\.start$', from_users=main_admin_id))
+@client.on(events.NewMessage(pattern='^\.start$'))
 async def start(event):
+    if not await is_admin(event):
+        return
     username = (await event.get_sender()).username
     await event.reply(f"Hai @{username}, saya adalah userbot sebar list")
 
-@client.on(events.NewMessage(pattern='^\.help$', from_users=main_admin_id))
+@client.on(events.NewMessage(pattern='^\.help$'))
 async def help(event):
+    if not await is_admin(event):
+        return
     help_text = """
     Fitur-fitur bot:
     1. .start - Menyapa pengguna.
@@ -67,8 +72,10 @@ async def help(event):
     """
     await event.reply(help_text)
 
-@client.on(events.NewMessage(pattern='^\.add$', from_users=main_admin_id))
+@client.on(events.NewMessage(pattern='^\.add$'))
 async def add_message(event):
+    if not await is_admin(event):
+        return
     if event.is_reply:
         reply_msg = await event.get_reply_message()
         message_dict = {
@@ -79,8 +86,10 @@ async def add_message(event):
         save_messages(messages)
         await event.reply("Pesan telah disimpan!")
 
-@client.on(events.NewMessage(pattern='^\.mulai$', from_users=main_admin_id))
+@client.on(events.NewMessage(pattern='^\.mulai$'))
 async def mulai(event):
+    if not await is_admin(event):
+        return
     async def send_messages():
         while True:
             for msg in messages:
@@ -101,8 +110,10 @@ async def mulai(event):
     asyncio.create_task(send_messages())
     await event.reply("Pengiriman pesan dimulai!")
 
-@client.on(events.NewMessage(pattern=r'^\.setdelay (\d+) (\d+)$', from_users=main_admin_id))
+@client.on(events.NewMessage(pattern=r'^\.setdelay (\d+) (\d+)$'))
 async def set_delay(event):
+    if not await is_admin(event):
+        return
     index = int(event.pattern_match.group(1)) - 1
     delay = int(event.pattern_match.group(2))
     if 0 <= index < len(messages):
@@ -112,39 +123,43 @@ async def set_delay(event):
     else:
         await event.reply("Index pesan tidak valid!")
 
-@client.on(events.NewMessage(pattern='^\.stop$', from_users=main_admin_id))
+@client.on(events.NewMessage(pattern='^\.stop$'))
 async def stop(event):
+    if not await is_admin(event):
+        return
     # Hentikan semua task pengiriman pesan
     for task in asyncio.all_tasks():
         task.cancel()
     await event.reply("Pengiriman pesan dihentikan!")
 
 # Fungsi untuk membuat clone userbot
-async def create_clone_userbot(api_id, api_hash, phone, main_admin_id):
+async def create_clone_userbot(api_id, api_hash, phone, main_admin_username):
     clone_client = TelegramClient(f'clone_{phone}', api_id, api_hash)
     try:
         await clone_client.start(phone)
         await clone_client.send_code_request(phone)
-        await clone_client.send_message(main_admin_id, f"Kode OTP telah dikirim ke {phone}. Masukkan kode OTP dengan format .otp <kode>")
+        await clone_client.send_message(main_admin_username, f"Kode OTP telah dikirim ke {phone}. Masukkan kode OTP dengan format .otp <kode>")
         return clone_client
     except PhoneNumberInvalidError:
-        await client.send_message(main_admin_id, f"Nomor telepon {phone} tidak valid.")
+        await client.send_message(main_admin_username, f"Nomor telepon {phone} tidak valid.")
         return None
 
 # Fitur untuk membuat clone userbot
-@client.on(events.NewMessage(pattern=r'^\.clone (\d+) (\d+) (\d+)$', from_users=main_admin_id))
+@client.on(events.NewMessage(pattern=r'^\.clone (\d+) (\d+) (\d+)$'))
 async def clone_userbot(event):
+    if not await is_admin(event):
+        return
     api_id = int(event.pattern_match.group(1))
     api_hash = event.pattern_match.group(2)
     phone = event.pattern_match.group(3)
-    clone_client = await create_clone_userbot(api_id, api_hash, phone, main_admin_id)
+    clone_client = await create_clone_userbot(api_id, api_hash, phone, main_admin_username)
     if clone_client:
         clone_data = {
             'username': (await clone_client.get_me()).username,
             'phone': phone,
             'api_id': api_id,
             'api_hash': api_hash,
-            'main_admin_id': main_admin_id,
+            'main_admin_username': main_admin_username,
             'status': 'pending'
         }
         clones.append(clone_data)
@@ -152,8 +167,10 @@ async def clone_userbot(event):
         await event.reply(f"Userbot clone untuk {phone} sedang menunggu kode OTP.")
 
 # Fitur untuk memasukkan kode OTP
-@client.on(events.NewMessage(pattern=r'^\.otp (\d+)$', from_users=main_admin_id))
+@client.on(events.NewMessage(pattern=r'^\.otp (\d+)$'))
 async def input_otp(event):
+    if not await is_admin(event):
+        return
     code = event.pattern_match.group(1)
     for clone in clones:
         if clone['status'] == 'pending':
@@ -169,8 +186,10 @@ async def input_otp(event):
                 await event.reply(f"Gagal mengaktifkan clone userbot: {str(e)}")
 
 # Fitur untuk melihat daftar clone userbot
-@client.on(events.NewMessage(pattern='^\.listclone$', from_users=main_admin_id))
+@client.on(events.NewMessage(pattern='^\.listclone$'))
 async def list_clone(event):
+    if not await is_admin(event):
+        return
     if clones:
         message = "Daftar clone userbot:\n\n"
         for clone in clones:
@@ -180,14 +199,16 @@ async def list_clone(event):
         await event.reply("Tidak ada clone userbot yang terdaftar.")
 
 # Fitur untuk menghapus clone userbot
-@client.on(events.NewMessage(pattern=r'^\.delclone (\d+)$', from_users=main_admin_id))
+@client.on(events.NewMessage(pattern=r'^\.delclone (\d+)$'))
 async def delete_clone(event):
+    if not await is_admin(event):
+        return
     phone = event.pattern_match.group(1)
     global clones
     clones = [clone for clone in clones if clone['phone'] != phone]
     save_clones(clones)
-    await event.reply(f"Clone userbot dengan nomor {phone} telah dihapus.")
+    await event.reply(f"Clone userbot untuk {phone} telah dihapus.")
 
 # Start client
-client.start()
-client.run_until_disconnected()
+with client:
+    client.run_until_disconnected()
