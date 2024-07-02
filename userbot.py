@@ -118,7 +118,7 @@ async def add_clone(event):
 
 @client.on(events.NewMessage(pattern='/help'))
 async def help(event):
-    if event.sender_id == int(admin_id)):
+    if event.sender_id == int(admin_id):
         buttons = [
             [
                 InlineKeyboardButton("Fitur Bot", b"features"),
