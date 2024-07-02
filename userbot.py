@@ -119,32 +119,35 @@ async def add_clone(event):
 @client.on(events.NewMessage(pattern='/help'))
 async def help(event):
     if event.sender_id == int(admin_id):
-    await event.respond(
-        'Berikut adalah perintah yang tersedia:\n\n'
-        '/start - Mulai bot\n'
-        '/help - Bantuan\n'
-        '/bantuan - Bantuan\n'
-        '/clone - Siapkan kloning userbot\n'
-        '/addclone [API_ID] [API_HASH] [STRING_SESSION] [ADMIN_ID] [EXPIRY_DATE] - Tambah userbot kloning\n'
-        '/addforward - Tambah pesan untuk di forward\n'
-        '/delforward - Hapus pesan dari daftar forward\n'
-        '/setdelay - Atur delay pengiriman pesan\n'
-        '/checklist - Lihat daftar pesan yang di forward\n'
-        '/groups - Lihat dan kelola grup yang diikuti bot\n'
-        '/checkspeed - Cek kecepatan pengiriman bot\n'
-        '/join [GROUP_OR_CHANNEL] - Gabung ke grup atau channel\n'
-        '/setname [GROUP_ID] [NEW_NAME] - Ubah nama grup\n'
-        '/addmember [GROUP_ID] [USER_ID] - Tambah anggota grup\n'
-        '/kick [GROUP_ID] [USER_ID] - Kick anggota dari grup\n'
-        '/ban [GROUP_ID] [USER_ID] - Ban anggota dari grup\n'
-        '/unban [GROUP_ID] [USER_ID] - Unban anggota dari grup\n'
-        '/mute [GROUP_ID] [USER_ID] - Mute anggota di grup\n'
-        '/unmute [GROUP_ID] [USER_ID] - Unmute anggota di grup\n'
-        '/mulai - Mulai mengirim pesan otomatis\n'
-        '/stop - Hentikan pengiriman pesan otomatis\n'
-        '/listclone - Lihat daftar kloning userbot'
-        else:
-    await event.respond('Anda tidak memiliki akses untuk menggunakan bot ini.', parse_mode='Markdown')
+        await event.respond(
+            'Berikut adalah perintah yang tersedia:\n\n'
+            '/start - Mulai bot\n'
+            '/help - Bantuan\n'
+            '/bantuan - Bantuan\n'
+            '/clone - Siapkan kloning userbot\n'
+            '/addclone [API_ID] [API_HASH] [STRING_SESSION] [ADMIN_ID] [EXPIRY_DATE] - Tambah userbot kloning\n'
+            '/addforward - Tambah pesan untuk di forward\n'
+            '/delforward - Hapus pesan dari daftar forward\n'
+            '/setdelay - Atur delay pengiriman pesan\n'
+            '/checklist - Lihat daftar pesan yang di forward\n'
+            '/groups - Lihat dan kelola grup yang diikuti bot\n'
+            '/checkspeed - Cek kecepatan pengiriman bot\n'
+            '/join [GROUP_OR_CHANNEL] - Gabung ke grup atau channel\n'
+            '/setname [GROUP_ID] [NEW_NAME] - Ubah nama grup\n'
+            '/addmember [GROUP_ID] [USER_ID] - Tambah anggota grup\n'
+            '/kick [GROUP_ID] [USER_ID] - Kick anggota dari grup\n'
+            '/ban [GROUP_ID] [USER_ID] - Ban anggota dari grup\n'
+            '/unban [GROUP_ID] [USER_ID] - Unban anggota dari grup\n'
+            '/mute [GROUP_ID] [USER_ID] - Mute anggota di grup\n'
+            '/unmute [GROUP_ID] [USER_ID] - Unmute anggota di grup\n'
+            '/mulai - Mulai mengirim pesan otomatis\n'
+            '/stop - Hentikan pengiriman pesan otomatis\n'
+            '/listclone - Lihat daftar kloning userbot',
+            parse_mode='Markdown'
+        )
+    else:
+        await event.respond('Anda tidak memiliki akses untuk menggunakan bot ini.', parse_mode='Markdown')
+
     raise events.StopPropagation
 
 @client.on(events.NewMessage(pattern='/addforward'))
