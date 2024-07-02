@@ -10,7 +10,7 @@ import json
 from datetime import datetime, timedelta
 from telethon import TelegramClient, events, Button
 from telethon.sessions import StringSession
-from telethon.tl.types import MessageMediaPhoto, MessageMediaDocument, MessageMediaVideo
+from telethon.tl.types import MessageMediaPhoto, MessageMediaDocument
 from telethon.tl.custom import Button
 
 logging.basicConfig(level=logging.INFO)
