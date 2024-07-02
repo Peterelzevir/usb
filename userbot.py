@@ -414,36 +414,51 @@ async def unmute_member(event):
 async def mulai(event):
     global is_forwarding
     if event.sender_id == int(admin_id):
-        if not is_forwarding:
-            is_forwarding = True
-            while is_forwarding:
-                for item in forward_list:
+        if is_forwarding:
+            await event.respond('Pengiriman pesan otomatis sudah berjalan.')
+            return
+        is_forwarding = True
+        await event.respond('Pengiriman pesan otomatis dimulai.')
+
+        forward_list = load_forward_list()
+        groups = await client.get_dialogs()
+        group_ids = [dialog.id for dialog in groups if dialog.is_group]
+
+        while is_forwarding:
+            for item in forward_list:
+                for group_id in group_ids:
                     try:
                         if item['media']:
-                            await client.send_file(event.chat_id, file=item['media'], caption=item['caption'])
+                            if isinstance(item['media'], MessageMediaPhoto):
+                                await client.send_file(group_id, item['media'], caption=item['caption'])
+                            elif isinstance(item['media'], MessageMediaDocument):
+                                await client.send_file(group_id, item['media'], caption=item['caption'])
                         else:
-                            await client.send_message(event.chat_id, item['message'], link_preview=False)
-                        await asyncio.sleep(item['delay'])
+                            await client.send_message(group_id, item['message'])
                     except Exception as e:
-                        logging.error(f'Error sending message: {str(e)}')
-                await asyncio.sleep(1)
-            await event.respond('Pengiriman pesan otomatis dihentikan.', parse_mode='Markdown')
-        else:
-            await event.respond('Pengiriman pesan otomatis sudah berjalan.', parse_mode='Markdown')
+                        logging.error(f'Gagal mengirim pesan ke grup {group_id}: {e}')
+
+                await asyncio.sleep(item['delay'])
+
+            await asyncio.sleep(1)
     else:
         await event.respond('Anda tidak memiliki akses untuk menggunakan bot ini.', parse_mode='Markdown')
+
     raise events.StopPropagation
 
 @client.on(events.NewMessage(pattern='/stop'))
 async def stop(event):
     global is_forwarding
     if event.sender_id == int(admin_id):
+        if not is_forwarding:
+            await event.respond('Pengiriman pesan otomatis tidak sedang berjalan.')
+            return
         is_forwarding = False
-        await event.respond('Menghentikan pengiriman pesan otomatis.', parse_mode='Markdown')
+        await event.respond('Pengiriman pesan otomatis dihentikan.')
     else:
         await event.respond('Anda tidak memiliki akses untuk menggunakan bot ini.', parse_mode='Markdown')
-    raise events.StopPropagation
 
+    raise events.StopPropagation
 
 @client.on(events.NewMessage(pattern='/listclone'))
 async def list_clone(event):
