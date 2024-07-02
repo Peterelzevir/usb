@@ -119,21 +119,7 @@ async def add_clone(event):
 @client.on(events.NewMessage(pattern='/help'))
 async def help(event):
     if event.sender_id == int(admin_id):
-        buttons = [
-            [
-                InlineKeyboardButton("Fitur Bot", b"features"),
-                InlineKeyboardButton("Kembali", b"back")
-            ]
-        ]
-        keyboard = InlineKeyboardMarkup(buttons)
-        await event.respond('Pilih untuk melihat fitur atau kembali ke menu utama:', buttons=keyboard)
-    else:
-        await event.respond('Anda tidak memiliki akses untuk menggunakan bot ini.', parse_mode='Markdown')
-    raise events.StopPropagation
-
-@client.on(events.CallbackQuery(data=b"features"))
-async def show_features(event):
-    features_text = (
+    await event.respond(
         'Berikut adalah perintah yang tersedia:\n\n'
         '/start - Mulai bot\n'
         '/help - Bantuan\n'
@@ -157,22 +143,9 @@ async def show_features(event):
         '/mulai - Mulai mengirim pesan otomatis\n'
         '/stop - Hentikan pengiriman pesan otomatis\n'
         '/listclone - Lihat daftar kloning userbot'
-    )
-    buttons = [
-        [Button.inline("Kembali", b"back")]
-    ]
-    keyboard = InlineKeyboardMarkup(buttons)
-    await event.edit(features_text, buttons=keyboard, parse_mode='Markdown')
-
-@client.on(events.CallbackQuery(data=b"back"))
-async def back_to_help(event):
-    buttons = [
-        [InlineKeyboardButton("Fitur Bot", b"features")],
-        [InlineKeyboardButton("Kembali", b"back")]
-    ]
-    keyboard = InlineKeyboardMarkup(buttons)
-    await event.edit('Pilih untuk melihat fitur atau kembali ke menu utama:', buttons=keyboard, parse_mode='Markdown')
-
+        else:
+    await event.respond('Anda tidak memiliki akses untuk menggunakan bot ini.', parse_mode='Markdown')
+    raise events.StopPropagation
 
 @client.on(events.NewMessage(pattern='/addforward'))
 async def add_forward(event):
