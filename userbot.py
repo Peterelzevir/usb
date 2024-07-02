@@ -12,7 +12,6 @@ from telethon import TelegramClient, events, Button
 from telethon import Button
 from telethon.sessions import StringSession
 from telethon.tl.types import MessageMediaPhoto, MessageMediaDocument
-from telethon.tl.types import InlineKeyboardMarkup, InlineKeyboardButton
 from telethon.tl.custom import Button
 
 logging.basicConfig(level=logging.INFO)
