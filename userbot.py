@@ -10,7 +10,8 @@ import json
 from datetime import datetime, timedelta
 from telethon import TelegramClient, events, Button
 from telethon.sessions import StringSession
-from telethon.tl.types import MessageMediaPhoto, MessageMediaDocument
+from telethon.tl.types import MessageMediaPhoto, MessageMediaDocument, MessageMediaVideo
+from telethon.tl.custom import Button
 
 logging.basicConfig(level=logging.INFO)
 
@@ -113,6 +114,7 @@ async def add_clone(event):
         await event.respond('Anda tidak memiliki akses untuk menggunakan bot ini.', parse_mode='Markdown')
     raise events.StopPropagation
 
+# Update the 'help' and 'back_to_help' functions
 @client.on(events.NewMessage(pattern='/help'))
 async def help(event):
     if event.sender_id == int(admin_id):
