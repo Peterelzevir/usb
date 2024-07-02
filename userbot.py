@@ -162,15 +162,20 @@ async def add_forward(event):
         if event.reply_to_msg_id:
             reply_msg = await event.get_reply_message()
             caption = reply_msg.text if reply_msg.text else None
-            if reply_msg.media:
-                forward_item = {
+            media = reply_msg.media
+            media_caption = reply_msg.caption if reply_msg.caption else None
+            if media:
+                forward_list.append({
                     'id': reply_msg.id,
-                    'message': reply_msg.text if reply_msg.text else '',
-                    'media': reply_msg.media,
-                    'caption': caption if caption else '',
-                    'delay': '120'  # Default delay
-                }
-                forward_list.append(forward_item)
+                    'message': reply_msg.text,
+                    'media': {
+                        '_': 'MessageMediaPhoto' if isinstance(media, types.MessageMediaPhoto) else 'MessageMediaDocument',
+                        'id': media.id,
+                        'caption': media_caption,
+                        'file_name': media.document.attributes[0].file_name if isinstance(media, types.MessageMediaDocument) else None
+                    },
+                    'delay': delay_settings  # Default delay
+                })
                 save_forward_list(forward_list)
                 await event.respond('Pesan telah ditambahkan untuk di-forward.', parse_mode='Markdown')
             else:
@@ -180,19 +185,6 @@ async def add_forward(event):
     else:
         await event.respond('Anda tidak memiliki akses untuk menggunakan bot ini.', parse_mode='Markdown')
     raise events.StopPropagation
-
-def save_forward_list(forward_list):
-    with open('forward_list.json', 'w', encoding='utf-8') as file:
-        json.dump(forward_list, file, ensure_ascii=False, indent=4)
-
-def load_forward_list():
-    try:
-        with open('forward_list.json', 'r', encoding='utf-8') as file:
-            return json.load(file)
-    except (FileNotFoundError, json.JSONDecodeError):
-        return []
-        
-forward_list = load_forward_list()
 
 @client.on(events.NewMessage(pattern='/delforward'))
 async def del_forward(event):
@@ -238,7 +230,12 @@ async def check_list(event):
         if forward_list:
             message = 'Daftar pesan untuk di forward:\n\n'
             for idx, item in enumerate(forward_list, start=1):
-                message += f"{idx}. Pesan: {item['message']}\n   Media: {bool(item['media'])}\n   Caption: {item['caption']}\n   Delay: {item['delay']} detik\n\n"
+                message += f"{idx}. Pesan: {item['message']}\n"
+                if item['media']:
+                    message += f"   Media: {item['media']['_']}\n"
+                    if item['media']['caption']:
+                        message += f"   Caption: {item['media']['caption']}\n"
+                message += f"   Delay: {item['delay']} detik\n\n"
             await event.respond(message, parse_mode='Markdown')
         else:
             await event.respond('Daftar pesan untuk di forward masih kosong.', parse_mode='Markdown')
@@ -405,85 +402,36 @@ async def unmute_member(event):
         await event.respond('Anda tidak memiliki akses untuk menggunakan bot ini.', parse_mode='Markdown')
     raise events.StopPropagation
 
+# Variabel global untuk mengontrol task forwarding
+forward_task = None
+
 @client.on(events.NewMessage(pattern='/mulai'))
 async def start_forward(event):
+    global forward_task
     if event.sender_id == int(admin_id):
-        async def forward_messages():
-            while True:
-                for item in forward_list:
-                    for group in await client.get_dialogs():
-                        if group.is_group:
-                            if item['media']:
-                                await client.send_file(group, item['media'], caption=item['caption'])
-                            else:
-                                await client.send_message(group, item['message'], parse_mode='Markdown')
-                            await asyncio.sleep(item['delay'])
-        asyncio.create_task(forward_messages())
-        await event.respond('Pengiriman pesan ke seluruh grup telah dimulai.', parse_mode='Markdown')
+        if not forward_task:
+            forward_task = asyncio.create_task(forward_messages())
+            await event.respond("Forwarding messages started.")
+        else:
+            await event.respond("Forwarding messages is already running.")
     else:
         await event.respond('Anda tidak memiliki akses untuk menggunakan bot ini.', parse_mode='Markdown')
     raise events.StopPropagation
 
 @client.on(events.NewMessage(pattern='/stop'))
 async def stop_forward(event):
+    global forward_task
     if event.sender_id == int(admin_id):
-        for task in asyncio.all_tasks():
-            if task.get_name() == 'forward_messages':
-                task.cancel()
-        await event.respond('Pengiriman pesan ke seluruh grup telah dihentikan.', parse_mode='Markdown')
-    else:
-        await event.respond('Anda tidak memiliki akses untuk menggunakan bot ini.', parse_mode='Markdown')
-    raise events.StopPropagation
-
-@client.on(events.NewMessage(pattern='/listclone'))
-async def list_clone(event):
-    if event.sender_id == int(admin_id):
-        with sqlite3.connect('userbot.db') as conn:
-            c = conn.cursor()
-            c.execute("SELECT * FROM clones")
-            clones = c.fetchall()
-
-        if clones:
-            message = 'Daftar kloning userbot:\n\n'
-            for clone in clones:
-                message += (
-                    f"API ID: {clone[1]}\n"
-                    f"API Hash: {clone[2]}\n"
-                    f"String Session: {clone[3]}\n"
-                    f"Admin ID: {clone[4]}\n"
-                    f"Expiry Date: {clone[5]}\n\n"
-                )
-            await event.respond(message, parse_mode='Markdown')
+        if forward_task:
+            forward_task.cancel()
+            forward_task = None
+            await event.respond("Forwarding messages stopped.")
         else:
-            await event.respond('Tidak ada kloning userbot yang aktif saat ini.', parse_mode='Markdown')
+            await event.respond("Forwarding messages is not currently active.")
     else:
         await event.respond('Anda tidak memiliki akses untuk menggunakan bot ini.', parse_mode='Markdown')
     raise events.StopPropagation
 
-async def forward_messages():
-    global is_forwarding
-    while is_forwarding:
-        for message_info in forward_list:
-            message_id = message_info['id']
-            delay = message_info['delay']
-
-            try:
-                if 'media' in message_info and message_info['media']:
-                    if isinstance(message_info['media'], MessageMediaPhoto):
-                        await client.send_message(admin_id, file=message_info['media'], caption=message_info['caption'])
-                    elif isinstance(message_info['media'], MessageMediaDocument):
-                        await client.send_file(admin_id, file=message_info['media'], caption=message_info['caption'])
-                else:
-                    await client.send_message(admin_id, message_info['message'])
-
-                await asyncio.sleep(delay)
-            except Exception as e:
-                logging.error(f'Gagal mengirim pesan: {str(e)}')
-        
-        # Reset delay_settings to default
-        delay_settings = 60
-
-    logging.info('Pengiriman pesan otomatis dihentikan.')
 
 async def main():
     await client.start()
