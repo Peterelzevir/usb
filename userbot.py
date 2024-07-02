@@ -115,6 +115,10 @@ async def add_clone(event):
         await event.respond('Anda tidak memiliki akses untuk menggunakan bot ini.', parse_mode='Markdown')
     raise events.StopPropagation
 
+@client.on(events.NewMessage(pattern='/deleteclone')) async def delete_clone(event): if event.sender_id == int(admin_id): try: admin_id = event.message.text.split()[1] with sqlite3.connect('userbot.db') as conn: c = conn.cursor() c.execute("DELETE FROM clones WHERE admin_id = ?", (admin_id,)) conn.commit() await event.respond('Clone bot telah dihapus.', parse_mode='Markdown') except (IndexError, sqlite3.Error) as e: await event.respond('Format salah atau terjadi kesalahan!', parse_mode='Markdown') else: await event.respond('Anda tidak memiliki akses untuk menggunakan bot ini.', parse_mode='Markdown') raise events.StopPropagation
+
+@client.on(events.NewMessage(pattern='/runtime')) async def runtime(event): if event.sender_id == int(admin_id): current_time = datetime.now() uptime = current_time - start_time await event.respond(f'Bot telah berjalan selama: {uptime}.', parse_mode='Markdown') else: await event.respond('Anda tidak memiliki akses untuk menggunakan bot ini.', parse_mode='Markdown') raise events.StopPropagation
+
 @client.on(events.NewMessage(pattern='/help'))
 async def help(event):
     if event.sender_id == int(admin_id):
@@ -154,15 +158,19 @@ async def add_forward(event):
     if event.sender_id == int(admin_id):
         if event.reply_to_msg_id:
             reply_msg = await event.get_reply_message()
-            forward_list.append({
-                'id': reply_msg.id,
-                'message': reply_msg.text,
-                'media': reply_msg.media,
-                'caption': reply_msg.caption,
-                'delay': delay_settings  # Default delay
-            })
-            save_forward_list(forward_list)
-            await event.respond('Pesan telah ditambahkan untuk di-forward.', parse_mode='Markdown')
+            caption = reply_msg.text if reply_msg.text else None
+            if reply_msg.media:
+                forward_list.append({
+                    'id': reply_msg.id,
+                    'message': reply_msg.text,
+                    'media': reply_msg.media,
+                    'caption': caption,
+                    'delay': delay_settings  # Default delay
+                })
+                save_forward_list(forward_list)
+                await event.respond('Pesan telah ditambahkan untuk di-forward.', parse_mode='Markdown')
+            else:
+                await event.respond('Balas pesan media yang ingin Anda tambahkan ke daftar forward.', parse_mode='Markdown')
         else:
             await event.respond('Balas pesan yang ingin Anda tambahkan ke daftar forward.', parse_mode='Markdown')
     else:
@@ -188,15 +196,24 @@ async def del_forward(event):
 
 @client.on(events.NewMessage(pattern='/setdelay'))
 async def set_delay(event):
+    global delay_settings
     if event.sender_id == int(admin_id):
         try:
-            delay_settings = int(event.message.text.split()[1])
-            await event.respond(f'Delay pengiriman pesan diatur ke {delay_settings} detik.', parse_mode='Markdown')
+            params = event.message.text.split()
+            index = int(params[1]) - 1  # Ambil indeks pesan dari input pengguna
+            new_delay = int(params[2])  # Ambil delay baru dari input pengguna
+            if 0 <= index < len(forward_list):
+                forward_list[index]['delay'] = new_delay  # Atur delay baru untuk pesan dengan indeks tertentu
+                save_forward_list(forward_list)
+                await event.respond(f'Delay pengiriman pesan dengan indeks {index + 1} diatur ke {new_delay} detik.', parse_mode='Markdown')
+            else:
+                await event.respond('Index pesan tidak valid.', parse_mode='Markdown')
         except (IndexError, ValueError):
-            await event.respond('Format salah! Gunakan: /setdelay [DELAY_IN_SECONDS]', parse_mode='Markdown')
+            await event.respond('Format salah! Gunakan: /setdelay [INDEX] [DELAY_IN_SECONDS]', parse_mode='Markdown')
     else:
         await event.respond('Anda tidak memiliki akses untuk menggunakan bot ini.', parse_mode='Markdown')
     raise events.StopPropagation
+
 
 @client.on(events.NewMessage(pattern='/checklist'))
 async def check_list(event):
@@ -372,13 +389,23 @@ async def unmute_member(event):
     raise events.StopPropagation
 
 @client.on(events.NewMessage(pattern='/mulai'))
-async def start_forward(event):
+async def mulai(event):
     global is_forwarding
     if event.sender_id == int(admin_id):
         if not is_forwarding:
             is_forwarding = True
-            await event.respond('Mulai mengirimkan pesan otomatis.', parse_mode='Markdown')
-            await forward_messages()
+            while is_forwarding:
+                for item in forward_list:
+                    try:
+                        if item['media']:
+                            await client.send_file(event.chat_id, file=item['media'], caption=item['caption'])
+                        else:
+                            await client.send_message(event.chat_id, item['message'], link_preview=False)
+                        await asyncio.sleep(item['delay'])
+                    except Exception as e:
+                        logging.error(f'Error sending message: {str(e)}')
+                await asyncio.sleep(1)
+            await event.respond('Pengiriman pesan otomatis dihentikan.', parse_mode='Markdown')
         else:
             await event.respond('Pengiriman pesan otomatis sudah berjalan.', parse_mode='Markdown')
     else:
@@ -386,17 +413,15 @@ async def start_forward(event):
     raise events.StopPropagation
 
 @client.on(events.NewMessage(pattern='/stop'))
-async def stop_forward(event):
+async def stop(event):
     global is_forwarding
     if event.sender_id == int(admin_id):
-        if is_forwarding:
-            is_forwarding = False
-            await event.respond('Berhenti mengirimkan pesan otomatis.', parse_mode='Markdown')
-        else:
-            await event.respond('Pengiriman pesan otomatis belum dimulai.', parse_mode='Markdown')
+        is_forwarding = False
+        await event.respond('Menghentikan pengiriman pesan otomatis.', parse_mode='Markdown')
     else:
         await event.respond('Anda tidak memiliki akses untuk menggunakan bot ini.', parse_mode='Markdown')
     raise events.StopPropagation
+
 
 @client.on(events.NewMessage(pattern='/listclone'))
 async def list_clone(event):
