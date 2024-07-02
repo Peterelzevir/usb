@@ -168,7 +168,7 @@ async def add_forward(event):
                     'message': reply_msg.text if reply_msg.text else '',
                     'media': reply_msg.media,
                     'caption': caption if caption else '',
-                    'delay': delay_settings  # Default delay
+                    'delay': '120'  # Default delay
                 }
                 forward_list.append(forward_item)
                 save_forward_list(forward_list)
