@@ -9,8 +9,10 @@ import sqlite3
 import json
 from datetime import datetime, timedelta
 from telethon import TelegramClient, events, Button
+from telethon import Button
 from telethon.sessions import StringSession
 from telethon.tl.types import MessageMediaPhoto, MessageMediaDocument
+from telethon.tl.types import InlineKeyboardMarkup, InlineKeyboardButton
 from telethon.tl.custom import Button
 
 logging.basicConfig(level=logging.INFO)
@@ -114,15 +116,17 @@ async def add_clone(event):
         await event.respond('Anda tidak memiliki akses untuk menggunakan bot ini.', parse_mode='Markdown')
     raise events.StopPropagation
 
-# Update the 'help' and 'back_to_help' functions
 @client.on(events.NewMessage(pattern='/help'))
 async def help(event):
-    if event.sender_id == int(admin_id):
+    if event.sender_id == int(admin_id)):
         buttons = [
-            [Button.inline("Fitur Bot", b"features")],
-            [Button.inline("Kembali", b"back")]
+            [
+                InlineKeyboardButton("Fitur Bot", b"features"),
+                InlineKeyboardButton("Kembali", b"back")
+            ]
         ]
-        await event.respond('Pilih untuk melihat fitur atau kembali ke menu utama:', buttons=buttons, parse_mode='Markdown')
+        keyboard = InlineKeyboardMarkup(buttons)
+        await event.respond('Pilih untuk melihat fitur atau kembali ke menu utama:', buttons=keyboard)
     else:
         await event.respond('Anda tidak memiliki akses untuk menggunakan bot ini.', parse_mode='Markdown')
     raise events.StopPropagation
@@ -157,15 +161,18 @@ async def show_features(event):
     buttons = [
         [Button.inline("Kembali", b"back")]
     ]
-    await event.edit(features_text, buttons=buttons, parse_mode='Markdown')
+    keyboard = InlineKeyboardMarkup(buttons)
+    await event.edit(features_text, buttons=keyboard, parse_mode='Markdown')
 
 @client.on(events.CallbackQuery(data=b"back"))
 async def back_to_help(event):
     buttons = [
-        [Button.inline("Fitur Bot", b"features")],
-        [Button.inline("Kembali", b"back")]
+        [InlineKeyboardButton("Fitur Bot", b"features")],
+        [InlineKeyboardButton("Kembali", b"back")]
     ]
-    await event.edit('Pilih untuk melihat fitur atau kembali ke menu utama:', buttons=buttons, parse_mode='Markdown')
+    keyboard = InlineKeyboardMarkup(buttons)
+    await event.edit('Pilih untuk melihat fitur atau kembali ke menu utama:', buttons=keyboard, parse_mode='Markdown')
+
 
 @client.on(events.NewMessage(pattern='/addforward'))
 async def add_forward(event):
