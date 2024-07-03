@@ -64,19 +64,60 @@ async def help(event):
 def is_admin(user_id):
     return user_id in admins
 
-@client.on(events.NewMessage(pattern='^\.add$'))
-async def add_message(event):
-    if not await is_admin(event):
-        return
-    if event.is_reply:
-        reply_msg = await event.get_reply_message()
-        message_dict = {
-            'id': len(messages) + 1,
-            'message': reply_msg.to_dict()
-        }
-        messages.append(message_dict)
-        save_messages(messages)
-        await event.reply("Pesan telah disimpan!")
+# Fitur .add
+@client.on(events.NewMessage(pattern=r'\.add'))
+async def add(event):
+    if is_admin(event.sender_id):
+        reply = await event.get_reply_message()
+        if reply:
+            processed_text = process_text(reply.raw_text)  # Fungsi untuk memproses teks dengan gaya tertentu
+            message_data = {
+                'text': reply.message,
+                'media': None,
+                'caption': reply.raw_text,
+                'formatted_text': processed_text
+            }
+
+            if reply.media:
+                if isinstance(reply.media, MessageMediaPhoto):
+                    media_data = {
+                        'type': 'photo',
+                        'file': await client.download_media(reply.media),
+                        'caption': processed_text
+                    }
+                    message_data['media'] = media_data
+                elif isinstance(reply.media, MessageMediaDocument):
+                    media_data = {
+                        'type': 'document',
+                        'file': await client.download_media(reply.media),
+                        'caption': processed_text
+                    }
+                    message_data['media'] = media_data
+                elif isinstance(reply.media, MessageMediaVideo):
+                    media_data = {
+                        'type': 'video',
+                        'file': await client.download_media(reply.media),
+                        'caption': processed_text
+                    }
+                    message_data['media'] = media_data
+                elif isinstance(reply.media, MessageMediaPhoto):
+                    media_data = {
+                        'type': 'gif',
+                        'file': await client.download_media(reply.media),
+                        'caption': processed_text
+                    }
+                    message_data['media'] = media_data
+
+            messages.append(message_data)
+
+            with open('messages.json', 'w') as f:
+                json.dump(messages, f, default=json_serial)
+
+            await event.respond('Pesan berhasil ditambahkan.')
+        else:
+            await event.respond('Harap reply ke pesan yang ingin ditambahkan.')
+    else:
+        await event.respond('Fitur ini hanya dapat digunakan oleh admin utama.')
 
 # Fitur .mulai
 @client.on(events.NewMessage(pattern=r'\.mulai'))
