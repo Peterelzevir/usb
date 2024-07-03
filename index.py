@@ -64,7 +64,6 @@ async def help(event):
 def is_admin(user_id):
     return user_id in admins
 
-# Fitur .add
 @client.on(events.NewMessage(pattern=r'\.add'))
 async def add(event):
     if is_admin(event.sender_id):
@@ -74,8 +73,17 @@ async def add(event):
                 'text': reply.raw_text,  # Simpan caption mentah dari pesan
                 'media': None,
                 'caption': reply.raw_text,  # Simpan caption mentah dari pesan
-                'formatted_text': reply.text  # Simpan teks yang diformat dari pesan
+                'entities': []  # Simpan entities (format teks)
             }
+            
+            # Tambahkan entities
+            for entity in reply.entities:
+                message_data['entities'].append({
+                    'type': entity.type.__name__,
+                    'offset': entity.offset,
+                    'length': entity.length
+                })
+            
             if reply.media:
                 if isinstance(reply.media, MessageMediaPhoto):
                     media_data = {
@@ -98,14 +106,14 @@ async def add(event):
                         'caption': reply.raw_text  # Simpan caption mentah dari media
                     }
                     message_data['media'] = media_data
-                elif isinstance(reply.media, MessageMediaPhoto):
+                elif isinstance(reply.media, MessageMediaGif):
                     media_data = {
                         'type': 'gif',
                         'file': await client.download_media(reply.media),
                         'caption': reply.raw_text  # Simpan caption mentah dari media
                     }
                     message_data['media'] = media_data
-
+            
             messages.append(message_data)
             
             with open('messages.json', 'w') as f:
