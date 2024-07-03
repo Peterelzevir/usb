@@ -207,23 +207,43 @@ async def clone(event):
             await event.respond('Silakan kirimkan nomor telepon Anda untuk verifikasi OTP.')
             
             # Menunggu respons nomor telepon dari admin utama
-            admin_response = await client.iter_messages(admin_id)
-            async for response in admin_response:
-                phone_number = response.message.strip()
-                break  # Ambil pesan pertama saja
+            admin_response = await client.get_messages(admin_id)
+            phone_number = None
+            async for message in admin_response:
+                if message.text:
+                    phone_number = message.text.strip()
+                    break
+            
+            if not phone_number:
+                await event.respond('Tidak dapat menemukan nomor telepon dari admin utama.')
+                return
             
             # Meminta OTP
             await client.send_code_request(phone_number)
             await event.respond('Kode OTP telah dikirimkan ke nomor telepon Anda. Silakan masukkan kode OTP.')
 
             # Menunggu respons kode OTP dari admin utama
-            admin_response = await client.iter_messages(admin_id)
-            async for response in admin_response:
-                code = response.message.strip()
-                break  # Ambil pesan pertama saja
+            async def handle_code_response(event):
+                nonlocal code_entered
+                if event.sender_id == admin_id and event.text:
+                    code_entered = event.text.strip()
+                    await event.respond('Kode OTP diterima.')
+                    return True
+                return False
+            
+            # Menunggu sampai kode OTP diterima dari admin utama
+            code_entered = None
+            await client.add_event_handler(handle_code_response, events.NewMessage)
+            while code_entered is None:
+                await asyncio.sleep(1)
+            await client.remove_event_handler(handle_code_response)
+            
+            if not code_entered:
+                await event.respond('Tidak dapat menerima kode OTP dari admin utama.')
+                return
 
             # Verifikasi kode OTP
-            await client.sign_in(phone=phone_number, code=code)
+            await client.sign_in(phone=phone_number, code=code_entered)
             
             # Simpan detail userbot clone ke database
             clone_details = {
@@ -249,6 +269,7 @@ async def clone(event):
             await event.respond(f"Terjadi kesalahan: {str(e)}")
     else:
         await event.respond('Fitur ini hanya dapat digunakan oleh admin utama.')
+
 
 
 
