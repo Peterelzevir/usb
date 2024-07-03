@@ -19,7 +19,7 @@ client = TelegramClient('userbot', api_id, api_hash)
 messages = []
 delay_times = []
 sending = False
-admins = [123456789]  # Ganti dengan ID admin utama Anda
+admins = [5988451717]  # Ganti dengan ID admin utama Anda
 
 # Membaca Pesan dari File JSON
 def load_messages():
