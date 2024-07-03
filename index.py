@@ -3,6 +3,7 @@ import asyncio
 import os
 from telethon import TelegramClient, events
 from telethon.tl.types import MessageMediaPhoto, MessageMediaDocument
+from telethon.tl.types import InputMessageEntityMentionName
 from telethon.errors.rpcerrorlist import PhoneNumberInvalidError, PhoneCodeInvalidError, FloodWaitError
 
 # Konfigurasi API Telegram
@@ -117,8 +118,8 @@ async def mulai(event):
                 if not sending:
                     break
                 for dialog in await client.get_dialogs():
-                    if dialog.is_group:
-                        try:
+                    try:
+                        if dialog.is_group or dialog.is_channel:
                             if message_data['media']:
                                 media_type = message_data['media']['type']
                                 media_file = message_data['media']['file']
@@ -126,9 +127,12 @@ async def mulai(event):
                                 media_entities = message_data['media']['entities']
                                 await client.send_file(dialog.id, media_file, caption=media_caption, entities=media_entities)
                             else:
-                                await client.send_message(dialog.id, message_data['text'], entities=message_data['entities'])
-                        except Exception as e:
-                            print(f"Error mengirim pesan ke grup {dialog.title}: {e}")
+                                # Mengirim pesan teks dengan entitas
+                                text = message_data['text']
+                                entities = message_data['entities']
+                                await client.send_message(dialog.id, text, entities=entities)
+                    except Exception as e:
+                        print(f"Error mengirim pesan ke grup/channel {dialog.title}: {e}")
                 await asyncio.sleep(delay_times[i] if i < len(delay_times) else 5)
     else:
         await event.respond('Fitur ini hanya dapat digunakan oleh admin utama.')
