@@ -72,30 +72,6 @@ async def help(event):
 def is_admin(user_id): 
     return user_id in admins
 
-from telethon import events
-import json
-import asyncio
-
-forward_list = []
-is_forwarding = False
-delay_settings = 5  # Atur delay default sesuai kebutuhan
-admin_id = 'your_admin_id'  # Ganti dengan admin ID Anda
-
-# Fungsi untuk memeriksa apakah pengguna adalah admin
-def is_admin(user_id):
-    return str(user_id) == admin_id
-
-# Fungsi untuk menyimpan daftar forward ke file
-def save_forward_list(forward_list):
-    with open('messages.json', 'w') as f:
-        json.dump(forward_list, f, default=json_serial)
-
-# Fungsi untuk meng-serialisasi JSON
-def json_serial(obj):
-    if isinstance(obj, (datetime, date)):
-        return obj.isoformat()
-    raise TypeError(f"Type {type(obj)} not serializable")
-
 # Handler untuk menambah pesan ke daftar forward
 @client.on(events.NewMessage(pattern='.addforward'))
 async def add_forward(event):
