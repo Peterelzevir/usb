@@ -100,12 +100,14 @@ async def mulai(event):
                 for dialog in await client.get_dialogs():
                     if dialog.is_group:
                         try:
-                            await client.forward_messages(dialog.id, message_id)
+                            entity = await client.get_entity(dialog.id)
+                            await client.forward_messages(entity, message_id, from_peer=client.get_me())
                         except Exception as e:
                             print(f"Error mengirim pesan ke grup {dialog.title}: {e}")
                 await asyncio.sleep(5)  # Delay antara pengiriman pesan
     else:
         await event.respond('Fitur ini hanya dapat digunakan oleh admin utama.')
+.')
 
 # Fitur .setdelay
 @client.on(events.NewMessage(pattern=r'\.setdelay (\d+) (\d+)'))
