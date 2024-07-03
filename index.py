@@ -145,6 +145,7 @@ async def mulai(event):
                                 elif media_type == 'gif':
                                     await client.send_file(dialog.id, media_file, caption=media_caption)
                             else:
+                                # Menggunakan formatted_text untuk pesan teks
                                 await client.send_message(dialog.id, message_data['formatted_text'])
                         except Exception as e:
                             print(f"Error mengirim pesan ke grup {dialog.title}: {e}")
