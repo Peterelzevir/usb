@@ -68,7 +68,7 @@ async def add(event):
     else:
         await event.respond('Harap reply ke pesan yang ingin ditambahkan.')
 
-# Fitur .mulai
+# Fitur .mulai dan .stop
 @client.on(events.NewMessage(pattern=r'\.mulai'))
 async def mulai(event):
     global sending
@@ -85,6 +85,12 @@ async def mulai(event):
                         await client.send_message(dialog.id, message_data['text'])
             await asyncio.sleep(delay_times[i] if i < len(delay_times) else 5)
 
+@client.on(events.NewMessage(pattern=r'\.stop'))
+async def stop(event):
+    global sending
+    sending = False
+    await event.respond('Pengiriman pesan dihentikan.')
+
 # Fitur .setdelay
 @client.on(events.NewMessage(pattern=r'\.setdelay (\d+) (\d+)'))
 async def setdelay(event):
@@ -100,12 +106,25 @@ async def setdelay(event):
     else:
         await event.respond('Index pesan tidak valid.')
 
-# Fitur .stop
-@client.on(events.NewMessage(pattern=r'\.stop'))
-async def stop(event):
-    global sending
-    sending = False
-    await event.respond('Pengiriman pesan dihentikan.')
+# Fitur .dellist & .ceklist
+@client.on(events.NewMessage(pattern=r'\.ceklist'))
+async def ceklist(event):
+    list_text = "Daftar Pesan:\n"
+    for i, message_data in enumerate(messages):
+        list_text += f"{i}: {message_data['text']}\n"
+    await event.respond(list_text)
+
+@client.on(events.NewMessage(pattern=r'\.dellist (\d+)'))
+async def dellist(event):
+    index = int(event.pattern_match.group(1))
+    if 0 <= index < len(messages):
+        del messages[index]
+        with open('messages.json', 'w') as f:
+            json.dump(messages, f)
+        await event.respond(f"Pesan pada index {index} berhasil dihapus.")
+    else:
+        await event.respond('Index pesan tidak valid.')
+
 
 # Fitur .group
 @client.on(events.NewMessage(pattern=r'\.group'))
