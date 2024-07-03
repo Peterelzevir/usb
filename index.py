@@ -2,7 +2,7 @@ import json
 import asyncio
 import os
 from telethon import TelegramClient, events
-from telethon.tl.types import MessageMediaPhoto, MessageMediaDocument
+from telethon.tl.types import MessageMediaPhoto, MessageMediaDocument, MessageMediaVideo
 from telethon.errors.rpcerrorlist import PhoneNumberInvalidError, PhoneCodeInvalidError, FloodWaitError
 
 # Konfigurasi API Telegram
@@ -73,7 +73,8 @@ async def add(event):
             message_data = {
                 'text': reply.message,
                 'media': None,
-                'caption': reply.raw_text
+                'caption': reply.raw_text,
+                'formatted_text': reply.text
             }
             if reply.media:
                 if isinstance(reply.media, MessageMediaPhoto):
@@ -90,7 +91,21 @@ async def add(event):
                         'caption': reply.raw_text
                     }
                     message_data['media'] = media_data
-            
+                elif isinstance(reply.media, MessageMediaVideo):
+                    media_data = {
+                        'type': 'video',
+                        'file': await client.download_media(reply.media),
+                        'caption': reply.raw_text
+                    }
+                    message_data['media'] = media_data
+                elif isinstance(reply.media, MessageMediaPhoto):
+                    media_data = {
+                        'type': 'gif',
+                        'file': await client.download_media(reply.media),
+                        'caption': reply.raw_text
+                    }
+                    message_data['media'] = media_data
+
             messages.append(message_data)
             
             with open('messages.json', 'w') as f:
@@ -124,8 +139,12 @@ async def mulai(event):
                                     await client.send_file(dialog.id, media_file, caption=media_caption)
                                 elif media_type == 'document':
                                     await client.send_file(dialog.id, media_file, caption=media_caption)
+                                elif media_type == 'video':
+                                    await client.send_file(dialog.id, media_file, caption=media_caption)
+                                elif media_type == 'gif':
+                                    await client.send_file(dialog.id, media_file, caption=media_caption)
                             else:
-                                await client.send_message(dialog.id, message_data['text'])
+                                await client.send_message(dialog.id, message_data['formatted_text'])
                         except Exception as e:
                             print(f"Error mengirim pesan ke grup {dialog.title}: {e}")
                 await asyncio.sleep(delay_times[i] if i < len(delay_times) else 5)
