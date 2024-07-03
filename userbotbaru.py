@@ -205,16 +205,12 @@ async def clone(event):
         try:
             # Meminta nomor telepon dari admin utama
             await event.respond('Silakan kirimkan nomor telepon Anda untuk verifikasi OTP.')
-            
+
             # Menunggu respons nomor telepon dari admin utama
-            admin_response = await client.get_messages(admin_id)
-            phone_number = None
-            async for message in admin_response:
-                if message.text:
-                    phone_number = message.text.strip()
-                    break
-            
-            if not phone_number:
+            admin_response = await client.get_messages(admin_id, limit=1)
+            if admin_response.total > 0:
+                phone_number = admin_response[0].text.strip()
+            else:
                 await event.respond('Tidak dapat menemukan nomor telepon dari admin utama.')
                 return
             
@@ -269,8 +265,6 @@ async def clone(event):
             await event.respond(f"Terjadi kesalahan: {str(e)}")
     else:
         await event.respond('Fitur ini hanya dapat digunakan oleh admin utama.')
-
-
 
 
 # Fitur .listclone
