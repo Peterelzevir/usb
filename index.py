@@ -29,6 +29,11 @@ def load_messages():
     if os.path.exists('delays.json'):
         with open('delays.json', 'r') as f:
             delay_times = json.load(f)
+            
+# Fungsi untuk menyimpan daftar forward ke file
+def save_forward_list(forward_list):
+    with open('messages.json', 'w') as f:
+        json.dump(forward_list, f, default=json_serial)
 
 # Fungsi untuk serialisasi objek JSON
 def json_serial(obj):
