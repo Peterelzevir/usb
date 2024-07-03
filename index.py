@@ -77,12 +77,13 @@ async def add(event):
             }
             
             # Tambahkan entities
-            for entity in reply.entities:
-                message_data['entities'].append({
-                    'type': entity.type.__name__,
-                    'offset': entity.offset,
-                    'length': entity.length
-                })
+            if reply.entities:
+                for entity in reply.entities:
+                    message_data['entities'].append({
+                        'type': entity.__class__.__name__,
+                        'offset': entity.offset,
+                        'length': entity.length
+                    })
             
             if reply.media:
                 if isinstance(reply.media, MessageMediaPhoto):
