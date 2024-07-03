@@ -202,13 +202,24 @@ async def clone(event):
         admin_id = event.pattern_match.group(3)
         expiration_time = event.pattern_match.group(4)
         
-        # Proses pengiriman OTP
         try:
-            phone_number = input("Masukkan nomor telepon untuk verifikasi OTP: ")
-            await client.sign_in(phone=phone_number)
+            # Meminta nomor telepon dari admin utama
+            await event.respond('Silakan kirimkan nomor telepon Anda untuk verifikasi OTP.')
             
-            code = input("Masukkan kode OTP yang dikirimkan ke nomor tersebut: ")
-            await client.sign_in(code=code)
+            # Menunggu respons nomor telepon dari admin utama
+            response = await client.await_event(events.NewMessage(from_users=admin_id))
+            phone_number = response.message.strip()
+            
+            # Meminta OTP
+            await client.send_code_request(phone_number)
+            await event.respond('Kode OTP telah dikirimkan ke nomor telepon Anda. Silakan masukkan kode OTP.')
+
+            # Menunggu respons kode OTP dari admin utama
+            response = await client.await_event(events.NewMessage(from_users=admin_id))
+            code = response.message.strip()
+
+            # Verifikasi kode OTP
+            await client.sign_in(phone=phone_number, code=code)
             
             # Simpan detail userbot clone ke database
             clone_details = {
@@ -234,6 +245,7 @@ async def clone(event):
             await event.respond(f"Terjadi kesalahan: {str(e)}")
     else:
         await event.respond('Fitur ini hanya dapat digunakan oleh admin utama.')
+
 
 # Fitur .listclone
 @client.on(events.NewMessage(pattern=r'\.listclone'))
