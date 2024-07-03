@@ -110,33 +110,33 @@ async def add(event):
 
 @client.on(events.NewMessage(pattern=r'\.mulai'))
 async def mulai(event):
-    if is_admin(event.sender_id):
-        global sending
-        await event.respond('Oke otw kirim')
-        sending = True
-        while sending:
-            for i, message_data in enumerate(messages):
-                if not sending:
-                    break
-                for dialog in await client.get_dialogs():
-                    try:
-                        if dialog.is_group or dialog.is_channel:
-                            if message_data['media']:
-                                media_type = message_data['media']['type']
-                                media_file = message_data['media']['file']
-                                media_caption = message_data['media']['caption']
-                                media_entities = message_data['media']['entities']
-                                await client.send_file(dialog.id, media_file, caption=media_caption, entities=media_entities)
-                            else:
-                                # Mengirim pesan teks dengan entitas
-                                text = message_data['text']
-                                entities = message_data['entities']
-                                await client.send_message(dialog.id, text, entities=entities)
-                    except Exception as e:
-                        print(f"Error mengirim pesan ke grup/channel {dialog.title}: {e}")
-                await asyncio.sleep(delay_times[i] if i < len(delay_times) else 5)
-    else:
-        await event.respond('Fitur ini hanya dapat digunakan oleh admin utama.')
+    if is_admin(event.sender_id):
+        global sending
+        await event.respond('Oke otw kirim')
+        sending = True
+        while sending:
+            for i, message_data in enumerate(messages):
+                if not sending:
+                    break
+                for dialog in await client.get_dialogs():
+                    try:
+                        if dialog.is_group:
+                            if message_data['media']:
+                                media_type = message_data['media']['type']
+                                media_file = message_data['media']['file']
+                                media_caption = message_data['media']['caption']
+                                media_entities = message_data['media']['entities']
+                                await client.send_file(dialog.id, media_file, caption=media_caption, parse_mode='html', entities=media_entities)  # Tambahkan parse_mode='html'
+                            else:
+                                # Mengirim pesan teks dengan entitas
+                                text = message_data['text']
+                                entities = message_data['entities']
+                                await client.send_message(dialog.id, text, parse_mode='html', entities=entities)  # Tambahkan parse_mode='html'
+                    except Exception as e:
+                        print(f"Error mengirim pesan ke grup/channel {dialog.title}: {e}")
+                await asyncio.sleep(delay_times[i] if i < len(delay_times) else 5)
+    else:
+        await event.respond('Fitur ini hanya dapat digunakan oleh admin utama.')
 
 @client.on(events.NewMessage(pattern=r'\.setdelay (\d+) (\d+)'))
 async def setdelay(event):
