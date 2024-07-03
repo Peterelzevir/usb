@@ -4,8 +4,7 @@ import os
 from telethon import TelegramClient, events
 from telethon.tl.types import MessageMediaPhoto, MessageMediaDocument
 from telethon.tl.types import InputMessageEntityMentionName
-from telethon.tl.types import MessageEntity
-from telethon.tl.types import MessageEntityTextUrl
+from telethon.tl.entities import MessageEntity
 from telethon.errors.rpcerrorlist import PhoneNumberInvalidError, PhoneCodeInvalidError, FloodWaitError
 
 # Konfigurasi API Telegram
