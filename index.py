@@ -107,7 +107,6 @@ async def mulai(event):
                 await asyncio.sleep(5)  # Delay antara pengiriman pesan
     else:
         await event.respond('Fitur ini hanya dapat digunakan oleh admin utama.')
-.')
 
 # Fitur .setdelay
 @client.on(events.NewMessage(pattern=r'\.setdelay (\d+) (\d+)'))
