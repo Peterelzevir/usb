@@ -60,20 +60,16 @@ async def help(event):
     )
     await event.respond(help_text)
 
-# Fungsi untuk verifikasi admin utama
-def is_admin(user_id):
-    return user_id in admins
-
 @client.on(events.NewMessage(pattern=r'\.add'))
 async def add(event):
     if is_admin(event.sender_id):
         reply = await event.get_reply_message()
         if reply:
             message_data = {
-                'text': reply.raw_text,  # Simpan caption mentah dari pesan
+                'text': reply.raw_text,
                 'media': None,
-                'caption': reply.raw_text,  # Simpan caption mentah dari pesan
-                'entities': []  # Simpan entities (format teks)
+                'caption': reply.raw_text,
+                'entities': []
             }
             
             # Tambahkan entities
@@ -86,34 +82,13 @@ async def add(event):
                     })
             
             if reply.media:
-                if isinstance(reply.media, MessageMediaPhoto):
-                    media_data = {
-                        'type': 'photo',
-                        'file': await client.download_media(reply.media),
-                        'caption': reply.raw_text  # Simpan caption mentah dari media
-                    }
-                    message_data['media'] = media_data
-                elif isinstance(reply.media, MessageMediaDocument):
-                    media_data = {
-                        'type': 'document',
-                        'file': await client.download_media(reply.media),
-                        'caption': reply.raw_text  # Simpan caption mentah dari media
-                    }
-                    message_data['media'] = media_data
-                elif isinstance(reply.media, MessageMediaVideo):
-                    media_data = {
-                        'type': 'video',
-                        'file': await client.download_media(reply.media),
-                        'caption': reply.raw_text  # Simpan caption mentah dari media
-                    }
-                    message_data['media'] = media_data
-                elif isinstance(reply.media, MessageMediaGif):
-                    media_data = {
-                        'type': 'gif',
-                        'file': await client.download_media(reply.media),
-                        'caption': reply.raw_text  # Simpan caption mentah dari media
-                    }
-                    message_data['media'] = media_data
+                media_data = {
+                    'type': reply.media.__class__.__name__.replace('MessageMedia', '').lower(),
+                    'file': await client.download_media(reply.media),
+                    'caption': reply.raw_text,
+                    'entities': message_data['entities']
+                }
+                message_data['media'] = media_data
             
             messages.append(message_data)
             
@@ -126,7 +101,6 @@ async def add(event):
     else:
         await event.respond('Fitur ini hanya dapat digunakan oleh admin utama.')
 
-# Fitur .mulai
 @client.on(events.NewMessage(pattern=r'\.mulai'))
 async def mulai(event):
     if is_admin(event.sender_id):
@@ -144,24 +118,16 @@ async def mulai(event):
                                 media_type = message_data['media']['type']
                                 media_file = message_data['media']['file']
                                 media_caption = message_data['media']['caption']
-                                if media_type == 'photo':
-                                    await client.send_file(dialog.id, media_file, caption=media_caption)
-                                elif media_type == 'document':
-                                    await client.send_file(dialog.id, media_file, caption=media_caption)
-                                elif media_type == 'video':
-                                    await client.send_file(dialog.id, media_file, caption=media_caption)
-                                elif media_type == 'gif':
-                                    await client.send_file(dialog.id, media_file, caption=media_caption)
+                                media_entities = message_data['media']['entities']
+                                await client.send_file(dialog.id, media_file, caption=media_caption, entities=media_entities)
                             else:
-                                # Menggunakan formatted_text untuk pesan teks
-                                await client.send_message(dialog.id, message_data['formatted_text'])
+                                await client.send_message(dialog.id, message_data['text'], entities=message_data['entities'])
                         except Exception as e:
                             print(f"Error mengirim pesan ke grup {dialog.title}: {e}")
                 await asyncio.sleep(delay_times[i] if i < len(delay_times) else 5)
     else:
         await event.respond('Fitur ini hanya dapat digunakan oleh admin utama.')
 
-# Fitur .setdelay
 @client.on(events.NewMessage(pattern=r'\.setdelay (\d+) (\d+)'))
 async def setdelay(event):
     if is_admin(event.sender_id):
@@ -179,7 +145,6 @@ async def setdelay(event):
     else:
         await event.respond('Fitur ini hanya dapat digunakan oleh admin utama.')
 
-# Fitur .stop
 @client.on(events.NewMessage(pattern=r'\.stop'))
 async def stop(event):
     if is_admin(event.sender_id):
@@ -188,6 +153,7 @@ async def stop(event):
         await event.respond('Pengiriman pesan dihentikan.')
     else:
         await event.respond('Fitur ini hanya dapat digunakan oleh admin utama.')
+
 
 # Fitur .group
 @client.on(events.NewMessage(pattern=r'\.group'))
