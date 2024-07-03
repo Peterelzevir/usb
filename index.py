@@ -65,44 +65,45 @@ def is_admin(user_id):
     return user_id in admins
 
 # Fitur .add
+@clie# Fitur .add
 @client.on(events.NewMessage(pattern=r'\.add'))
 async def add(event):
     if is_admin(event.sender_id):
         reply = await event.get_reply_message()
         if reply:
             message_data = {
-                'text': reply.message,
+                'text': reply.raw_text,  # Simpan caption mentah dari pesan
                 'media': None,
-                'caption': reply.raw_text,
-                'formatted_text': reply.text
+                'caption': reply.raw_text,  # Simpan caption mentah dari pesan
+                'formatted_text': reply.text  # Simpan teks yang diformat dari pesan
             }
             if reply.media:
                 if isinstance(reply.media, MessageMediaPhoto):
                     media_data = {
                         'type': 'photo',
                         'file': await client.download_media(reply.media),
-                        'caption': reply.raw_text
+                        'caption': reply.raw_text  # Simpan caption mentah dari media
                     }
                     message_data['media'] = media_data
                 elif isinstance(reply.media, MessageMediaDocument):
                     media_data = {
                         'type': 'document',
                         'file': await client.download_media(reply.media),
-                        'caption': reply.raw_text
+                        'caption': reply.raw_text  # Simpan caption mentah dari media
                     }
                     message_data['media'] = media_data
                 elif isinstance(reply.media, MessageMediaVideo):
                     media_data = {
                         'type': 'video',
                         'file': await client.download_media(reply.media),
-                        'caption': reply.raw_text
+                        'caption': reply.raw_text  # Simpan caption mentah dari media
                     }
                     message_data['media'] = media_data
                 elif isinstance(reply.media, MessageMediaPhoto):
                     media_data = {
                         'type': 'gif',
                         'file': await client.download_media(reply.media),
-                        'caption': reply.raw_text
+                        'caption': reply.raw_text  # Simpan caption mentah dari media
                     }
                     message_data['media'] = media_data
 
