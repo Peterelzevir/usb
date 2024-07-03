@@ -60,6 +60,11 @@ async def help(event):
     )
     await event.respond(help_text)
 
+
+# Fungsi untuk verifikasi admin utama 
+def is_admin(user_id): 
+    return user_id in admins
+
 @client.on(events.NewMessage(pattern=r'\.add'))
 async def add(event):
     if is_admin(event.sender_id):
