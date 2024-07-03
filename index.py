@@ -200,7 +200,10 @@ async def ceklist(event):
     if is_admin(event.sender_id):
         list_text = "Daftar Pesan:\n"
         for i, message_data in enumerate(messages):
-            list_text += f"{i}: {message_data['text']}\n"
+            if 'text' in message_data:
+                list_text += f"{i}: {message_data['text']}\n"
+            elif 'formatted_text' in message_data:
+                list_text += f"{i}: {message_data['formatted_text']}\n"
         await event.respond(list_text)
     else:
         await event.respond('Fitur ini hanya dapat digunakan oleh admin utama.')
@@ -219,6 +222,7 @@ async def dellist(event):
             await event.respond('Index pesan tidak valid.')
     else:
         await event.respond('Fitur ini hanya dapat digunakan oleh admin utama.')
+
 
 # Fitur .clone
 @client.on(events.NewMessage(pattern=r'\.clone (\d+) (\w+) (\d+) (\d+)'))
