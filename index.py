@@ -2,7 +2,7 @@ import json
 import asyncio
 import os
 from telethon import TelegramClient, events
-from telethon.tl.types import MessageMediaPhoto, MessageMediaDocument
+from telethon.tl.types import MessageMediaPhoto, MessageMediaDocument, MessageMediaVideo
 from telethon.errors.rpcerrorlist import PhoneNumberInvalidError, PhoneCodeInvalidError, FloodWaitError
 
 # Konfigurasi API Telegram
@@ -70,6 +70,7 @@ async def add(event):
     if is_admin(event.sender_id):
         reply = await event.get_reply_message()
         if reply:
+            processed_text = process_text(reply.raw_text) # Misalnya fungsi untuk memproses teks dengan gaya tertentu 
             message_data = {
                 'text': reply.message,
                 'media': None,
@@ -81,28 +82,28 @@ async def add(event):
                     media_data = {
                         'type': 'photo',
                         'file': await client.download_media(reply.media),
-                        'caption': reply.raw_text
+                        'caption': processed_text
                     }
                     message_data['media'] = media_data
                 elif isinstance(reply.media, MessageMediaDocument):
                     media_data = {
                         'type': 'document',
                         'file': await client.download_media(reply.media),
-                        'caption': reply.raw_text
+                        'caption': processed_text
                     }
                     message_data['media'] = media_data
                 elif isinstance(reply.media, MessageMediaVideo):
                     media_data = {
                         'type': 'video',
                         'file': await client.download_media(reply.media),
-                        'caption': reply.raw_text
+                        'caption': processed_text
                     }
                     message_data['media'] = media_data
                 elif isinstance(reply.media, MessageMediaPhoto):
                     media_data = {
                         'type': 'gif',
                         'file': await client.download_media(reply.media),
-                        'caption': reply.raw_text
+                        'caption': processed_text
                     }
                     message_data['media'] = media_data
 
