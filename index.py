@@ -72,7 +72,32 @@ async def help(event):
 def is_admin(user_id): 
     return user_id in admins
 
-@client.on(events.NewMessage(pattern='.add'))
+from telethon import events
+import json
+import asyncio
+
+forward_list = []
+is_forwarding = False
+delay_settings = 5  # Atur delay default sesuai kebutuhan
+admin_id = 'your_admin_id'  # Ganti dengan admin ID Anda
+
+# Fungsi untuk memeriksa apakah pengguna adalah admin
+def is_admin(user_id):
+    return str(user_id) == admin_id
+
+# Fungsi untuk menyimpan daftar forward ke file
+def save_forward_list(forward_list):
+    with open('messages.json', 'w') as f:
+        json.dump(forward_list, f, default=json_serial)
+
+# Fungsi untuk meng-serialisasi JSON
+def json_serial(obj):
+    if isinstance(obj, (datetime, date)):
+        return obj.isoformat()
+    raise TypeError(f"Type {type(obj)} not serializable")
+
+# Handler untuk menambah pesan ke daftar forward
+@client.on(events.NewMessage(pattern='.addforward'))
 async def add_forward(event):
     if is_admin(event.sender_id):
         if event.reply_to_msg_id:
@@ -111,42 +136,68 @@ async def add_forward(event):
         await event.respond('❌ *Anda tidak memiliki akses untuk menggunakan bot ini.*', parse_mode='Markdown')
     raise events.StopPropagation
 
-@client.on(events.NewMessage(pattern=r'\.mulai'))
-async def mulai(event):
+# Handler untuk mulai mengirim pesan
+@client.on(events.NewMessage(pattern='.mulai'))
+async def mulai_forward(event):
     if is_admin(event.sender_id):
-        global sending
+        global is_forwarding
+        if is_forwarding:
+            await event.respond('⚠️ *Pengiriman pesan otomatis sudah berjalan.*', parse_mode='Markdown')
+            return
+        is_forwarding = True
         await event.respond('Oke otw kirim')
-        sending = True
-        while sending:
-            for i, message_data in enumerate(messages):
-                if not sending:
-                    break
+        while is_forwarding:
+            for msg in forward_list:
                 for dialog in await client.get_dialogs():
                     try:
                         if dialog.is_group:
-                            if message_data['media']:
-                                media_type = message_data['media']['type']
-                                media_file = message_data['media']['file']
-                                media_caption = message_data['media']['caption']
-                                media_entities = message_data['media']['entities']
-                                await client.send_file(dialog.id, media_file, caption=media_caption, parse_mode='html', entities=media_entities)
+                            if msg['media']:
+                                await client.send_file(dialog.id, msg['media']['file'], caption=msg['caption'], entities=msg['entities'])
                             else:
-                                text = message_data['text']
-                                entities = message_data['entities']
-                                await client.send_message(dialog.id, text, parse_mode='html', entities=entities)
+                                await client.send_message(dialog.id, msg['text'], entities=msg['entities'])
                     except Exception as e:
                         print(f"Error mengirim pesan ke grup/channel {dialog.title}: {e}")
-                await asyncio.sleep(delay_times[i] if i < len(delay_times) else 5)
+                await asyncio.sleep(delay_settings)
+            await asyncio.sleep(delay_settings)
+    else:
+        await event.respond('❌ *Anda tidak memiliki akses untuk menggunakan bot ini.*', parse_mode='Markdown')
+    raise events.StopPropagation
+
+# Handler untuk cek daftar pesan
+@client.on(events.NewMessage(pattern=r'\.ceklist'))
+async def ceklist(event):
+    if is_admin(event.sender_id):
+        list_text = "Daftar Pesan:\n"
+        for i, message_data in enumerate(forward_list):
+            if 'text' in message_data:
+                list_text += f"{i}: {message_data['text']}\n"
+            elif 'formatted_text' in message_data:
+                list_text += f"{i}: {message_data['formatted_text']}\n"
+        await event.respond(list_text)
     else:
         await event.respond('Fitur ini hanya dapat digunakan oleh admin utama.')
 
+# Handler untuk menghapus pesan dari daftar
+@client.on(events.NewMessage(pattern=r'\.dellist (\d+)'))
+async def dellist(event):
+    if is_admin(event.sender_id):
+        index = int(event.pattern_match.group(1))
+        if index < len(forward_list):
+            deleted_message = forward_list.pop(index)
+            save_forward_list(forward_list)
+            await event.respond(f'Pesan ke-{index} berhasil dihapus:\n\n{deleted_message["text"] if "text" in deleted_message else "Media"}')
+        else:
+            await event.respond('Index pesan tidak valid.')
+    else:
+        await event.respond('Fitur ini hanya dapat digunakan oleh admin utama.')
 
+# Handler untuk mengatur delay masing-masing pesan
 @client.on(events.NewMessage(pattern=r'\.setdelay (\d+) (\d+)'))
 async def setdelay(event):
     if is_admin(event.sender_id):
         index = int(event.pattern_match.group(1))
         waktu = int(event.pattern_match.group(2))
-        if index < len(messages):
+        if index < len(forward_list):
             if len(delay_times) <= index:
                 delay_times.extend([5] * (index - len(delay_times) + 1))
             delay_times[index] = waktu
@@ -158,11 +209,12 @@ async def setdelay(event):
     else:
         await event.respond('Fitur ini hanya dapat digunakan oleh admin utama.')
 
+
 @client.on(events.NewMessage(pattern=r'\.stop'))
 async def stop(event):
     if is_admin(event.sender_id):
         global sending
-        sending = False
+        is_forwarding = False
         await event.respond('Pengiriman pesan dihentikan.')
     else:
         await event.respond('Fitur ini hanya dapat digunakan oleh admin utama.')
@@ -180,36 +232,6 @@ async def group(event):
         await event.respond(group_text)
     else:
         await event.respond('Fitur ini hanya dapat digunakan oleh admin utama.')
-
-# Fitur .ceklist
-@client.on(events.NewMessage(pattern=r'\.ceklist'))
-async def ceklist(event):
-    if is_admin(event.sender_id):
-        list_text = "Daftar Pesan:\n"
-        for i, message_data in enumerate(messages):
-            if 'text' in message_data:
-                list_text += f"{i}: {message_data['text']}\n"
-            elif 'formatted_text' in message_data:
-                list_text += f"{i}: {message_data['formatted_text']}\n"
-        await event.respond(list_text)
-    else:
-        await event.respond('Fitur ini hanya dapat digunakan oleh admin utama.')
-
-# Fitur .dellist
-@client.on(events.NewMessage(pattern=r'\.dellist (\d+)'))
-async def dellist(event):
-    if is_admin(event.sender_id):
-        index = int(event.pattern_match.group(1))
-        if 0 <= index < len(messages):
-            del messages[index]
-            with open('messages.json', 'w') as f:
-                json.dump(messages, f, default=json_serial)
-            await event.respond(f"Pesan pada index {index} berhasil dihapus.")
-        else:
-            await event.respond('Index pesan tidak valid.')
-    else:
-        await event.respond('Fitur ini hanya dapat digunakan oleh admin utama.')
-
 
 # Fitur .clone
 @client.on(events.NewMessage(pattern=r'\.clone (\d+) (\w+) (\d+) (\d+)'))
