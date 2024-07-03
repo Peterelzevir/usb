@@ -70,15 +70,47 @@ async def add(event):
     if is_admin(event.sender_id):
         reply = await event.get_reply_message()
         if reply:
-            message_id = reply.id
             message_data = {
-                'id': message_id
+                'text': reply.message,
+                'media': None,
+                'caption': reply.raw_text,
+                'formatted_text': reply.text
             }
-            messages.append(message_data)
+            if reply.media:
+                if isinstance(reply.media, MessageMediaPhoto):
+                    media_data = {
+                        'type': 'photo',
+                        'file': await client.download_media(reply.media),
+                        'caption': reply.raw_text
+                    }
+                    message_data['media'] = media_data
+                elif isinstance(reply.media, MessageMediaDocument):
+                    media_data = {
+                        'type': 'document',
+                        'file': await client.download_media(reply.media),
+                        'caption': reply.raw_text
+                    }
+                    message_data['media'] = media_data
+                elif isinstance(reply.media, MessageMediaVideo):
+                    media_data = {
+                        'type': 'video',
+                        'file': await client.download_media(reply.media),
+                        'caption': reply.raw_text
+                    }
+                    message_data['media'] = media_data
+                elif isinstance(reply.media, MessageMediaPhoto):
+                    media_data = {
+                        'type': 'gif',
+                        'file': await client.download_media(reply.media),
+                        'caption': reply.raw_text
+                    }
+                    message_data['media'] = media_data
 
+            messages.append(message_data)
+            
             with open('messages.json', 'w') as f:
                 json.dump(messages, f, default=json_serial)
-
+            
             await event.respond('Pesan berhasil ditambahkan.')
         else:
             await event.respond('Harap reply ke pesan yang ingin ditambahkan.')
@@ -93,18 +125,29 @@ async def mulai(event):
         await event.respond('Oke otw kirim')
         sending = True
         while sending:
-            for message_data in messages:
+            for i, message_data in enumerate(messages):
                 if not sending:
                     break
-                message_id = message_data['id']
                 for dialog in await client.get_dialogs():
                     if dialog.is_group:
                         try:
-                            entity = await client.get_entity(dialog.id)
-                            await client.forward_messages(entity, message_id, from_peer=client.get_me())
+                            if message_data['media']:
+                                media_type = message_data['media']['type']
+                                media_file = message_data['media']['file']
+                                media_caption = message_data['media']['caption']
+                                if media_type == 'photo':
+                                    await client.send_file(dialog.id, media_file, caption=media_caption)
+                                elif media_type == 'document':
+                                    await client.send_file(dialog.id, media_file, caption=media_caption)
+                                elif media_type == 'video':
+                                    await client.send_file(dialog.id, media_file, caption=media_caption)
+                                elif media_type == 'gif':
+                                    await client.send_file(dialog.id, media_file, caption=media_caption)
+                            else:
+                                await client.send_message(dialog.id, message_data['formatted_text'])
                         except Exception as e:
                             print(f"Error mengirim pesan ke grup {dialog.title}: {e}")
-                await asyncio.sleep(5)  # Delay antara pengiriman pesan
+                await asyncio.sleep(delay_times[i] if i < len(delay_times) else 5)
     else:
         await event.respond('Fitur ini hanya dapat digunakan oleh admin utama.')
 
@@ -114,7 +157,9 @@ async def setdelay(event):
     if is_admin(event.sender_id):
         index = int(event.pattern_match.group(1))
         waktu = int(event.pattern_match.group(2))
-        if index < len(delay_times):
+        if index < len(messages):
+            if len(delay_times) <= index:
+                delay_times.extend([5] * (index - len(delay_times) + 1))
             delay_times[index] = waktu
             with open('delays.json', 'w') as f:
                 json.dump(delay_times, f)
@@ -153,7 +198,7 @@ async def ceklist(event):
     if is_admin(event.sender_id):
         list_text = "Daftar Pesan:\n"
         for i, message_data in enumerate(messages):
-            list_text += f"{i}: {message_data['id']}\n"
+            list_text += f"{i}: {message_data['text']}\n"
         await event.respond(list_text)
     else:
         await event.respond('Fitur ini hanya dapat digunakan oleh admin utama.')
@@ -209,9 +254,9 @@ async def clone(event):
         except PhoneNumberInvalidError:
             await event.respond("Nomor telepon tidak valid.")
         except PhoneCodeInvalidError:
-            await event.respond("Kode OTP tidak valid.")
-        except FloodWaitError as e:
-            await event.respond(f"Terlalu banyak percobaan, harap tunggu {e.seconds} detik.")
+            await event.respond("Kode OTP salah.")
+        except Exception as e:
+            await event.respond(f"Terjadi kesalahan: {str(e)}")
     else:
         await event.respond('Fitur ini hanya dapat digunakan oleh admin utama.')
 
@@ -219,37 +264,36 @@ async def clone(event):
 @client.on(events.NewMessage(pattern=r'\.listclone'))
 async def listclone(event):
     if is_admin(event.sender_id):
-        clone_files = [f for f in os.listdir() if f.startswith('clone_') and f.endswith('.json')]
-        clone_list = "Daftar Userbot Clone:\n"
-        for clone_file in clone_files:
-            with open(clone_file, 'r') as f:
-                clone_data = json.load(f)
-                clone_list += f"{clone_file}: Admin ID {clone_data['admin_id']}, Expire {clone_data['expiration_time']}\n"
-        await event.respond(clone_list)
+        clone_list = []
+        for filename in os.listdir():
+            if filename.startswith('clone_') and filename.endswith('.json'):
+                with open(filename, 'r') as f:
+                    clone_data = json.load(f)
+                    clone_list.append(f"ID: {filename}, Admin ID: {clone_data['admin_id']}, Expiration Time: {clone_data['expiration_time']}")
+        clone_text = "Daftar Userbot Clone:\n" + "\n".join(clone_list)
+        await event.respond(clone_text)
     else:
         await event.respond('Fitur ini hanya dapat digunakan oleh admin utama.')
 
 # Fitur .delclone
-@client.on(events.NewMessage(pattern=r'\.delclone (.+)'))
+@client.on(events.NewMessage(pattern=r'\.delclone (\w+)'))
 async def delclone(event):
     if is_admin(event.sender_id):
         clone_id = event.pattern_match.group(1)
-        if os.path.exists(clone_id) and clone_id.startswith('clone_') and clone_id.endswith('.json'):
+        if os.path.exists(clone_id):
             os.remove(clone_id)
-            await event.respond(f"Userbot clone {clone_id} berhasil dihapus.")
+            await event.respond(f"Userbot clone dengan ID {clone_id} berhasil dihapus.")
         else:
             await event.respond('ID userbot clone tidak valid.')
     else:
         await event.respond('Fitur ini hanya dapat digunakan oleh admin utama.')
 
-# Menjalankan Client Telegram
+# Menjalankan Client
 async def main():
+    load_messages()
     await client.start()
+    print("Userbot berjalan...")
     await client.run_until_disconnected()
 
-# Memuat pesan dan waktu delay saat pertama kali dijalankan
-load_messages()
-
-# Menjalankan program
-if __name__ == '__main__':
-    client.loop.run_until_complete(main())
+loop = asyncio.get_event_loop()
+loop.run_until_complete(main())
