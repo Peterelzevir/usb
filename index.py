@@ -2,7 +2,7 @@ import json
 import asyncio
 import os
 from telethon import TelegramClient, events
-from telethon.tl.types import MessageMediaPhoto, MessageMediaDocument
+from telethon.tl.types import MessageMediaPhoto, MessageMediaDocument, MessageMediaGif
 from telethon.errors.rpcerrorlist import PhoneNumberInvalidError, PhoneCodeInvalidError, FloodWaitError
 
 # Konfigurasi API Telegram
@@ -70,44 +70,10 @@ async def add(event):
     if is_admin(event.sender_id):
         reply = await event.get_reply_message()
         if reply:
-            processed_text = process_text(reply.raw_text)  # Fungsi untuk memproses teks dengan gaya tertentu
+            message_id = reply.id
             message_data = {
-                'text': reply.message,
-                'media': None,
-                'caption': reply.raw_text,
-                'formatted_text': processed_text
+                'id': message_id
             }
-
-            if reply.media:
-                if isinstance(reply.media, MessageMediaPhoto):
-                    media_data = {
-                        'type': 'photo',
-                        'file': await client.download_media(reply.media),
-                        'caption': processed_text
-                    }
-                    message_data['media'] = media_data
-                elif isinstance(reply.media, MessageMediaDocument):
-                    media_data = {
-                        'type': 'document',
-                        'file': await client.download_media(reply.media),
-                        'caption': processed_text
-                    }
-                    message_data['media'] = media_data
-                elif isinstance(reply.media, MessageMediaVideo):
-                    media_data = {
-                        'type': 'video',
-                        'file': await client.download_media(reply.media),
-                        'caption': processed_text
-                    }
-                    message_data['media'] = media_data
-                elif isinstance(reply.media, MessageMediaPhoto):
-                    media_data = {
-                        'type': 'gif',
-                        'file': await client.download_media(reply.media),
-                        'caption': processed_text
-                    }
-                    message_data['media'] = media_data
-
             messages.append(message_data)
 
             with open('messages.json', 'w') as f:
@@ -127,29 +93,17 @@ async def mulai(event):
         await event.respond('Oke otw kirim')
         sending = True
         while sending:
-            for i, message_data in enumerate(messages):
+            for message_data in messages:
                 if not sending:
                     break
+                message_id = message_data['id']
                 for dialog in await client.get_dialogs():
                     if dialog.is_group:
                         try:
-                            if message_data['media']:
-                                media_type = message_data['media']['type']
-                                media_file = message_data['media']['file']
-                                media_caption = message_data['media']['caption']
-                                if media_type == 'photo':
-                                    await client.send_file(dialog.id, media_file, caption=media_caption)
-                                elif media_type == 'document':
-                                    await client.send_file(dialog.id, media_file, caption=media_caption)
-                                elif media_type == 'video':
-                                    await client.send_file(dialog.id, media_file, caption=media_caption)
-                                elif media_type == 'gif':
-                                    await client.send_file(dialog.id, media_file, caption=media_caption)
-                            else:
-                                await client.send_message(dialog.id, message_data['formatted_text'])
+                            await client.forward_messages(dialog.id, message_id)
                         except Exception as e:
                             print(f"Error mengirim pesan ke grup {dialog.title}: {e}")
-                await asyncio.sleep(delay_times[i] if i < len(delay_times) else 5)
+                await asyncio.sleep(5)  # Delay antara pengiriman pesan
     else:
         await event.respond('Fitur ini hanya dapat digunakan oleh admin utama.')
 
@@ -159,9 +113,7 @@ async def setdelay(event):
     if is_admin(event.sender_id):
         index = int(event.pattern_match.group(1))
         waktu = int(event.pattern_match.group(2))
-        if index < len(messages):
-            if len(delay_times) <= index:
-                delay_times.extend([5] * (index - len(delay_times) + 1))
+        if index < len(delay_times):
             delay_times[index] = waktu
             with open('delays.json', 'w') as f:
                 json.dump(delay_times, f)
@@ -200,7 +152,7 @@ async def ceklist(event):
     if is_admin(event.sender_id):
         list_text = "Daftar Pesan:\n"
         for i, message_data in enumerate(messages):
-            list_text += f"{i}: {message_data['text']}\n"
+            list_text += f"{i}: {message_data['id']}\n"
         await event.respond(list_text)
     else:
         await event.respond('Fitur ini hanya dapat digunakan oleh admin utama.')
@@ -270,26 +222,33 @@ async def listclone(event):
         clone_list = "Daftar Userbot Clone:\n"
         for clone_file in clone_files:
             with open(clone_file, 'r') as f:
-                clone_details = json.load(f)
-                clone_list += f"ID: {clone_file}\nAdmin ID: {clone_details['admin_id']}\nExpiration Time: {clone_details['expiration_time']}\n\n"
+                clone_data = json.load(f)
+                clone_list += f"{clone_file}: Admin ID {clone_data['admin_id']}, Expire {clone_data['expiration_time']}\n"
         await event.respond(clone_list)
     else:
         await event.respond('Fitur ini hanya dapat digunakan oleh admin utama.')
 
 # Fitur .delclone
-@client.on(events.NewMessage(pattern=r'\.delclone (\w+)'))
+@client.on(events.NewMessage(pattern=r'\.delclone (.+)'))
 async def delclone(event):
     if is_admin(event.sender_id):
         clone_id = event.pattern_match.group(1)
-        clone_filename = f"{clone_id}.json"
-        if os.path.exists(clone_filename):
-            os.remove(clone_filename)
-            await event.respond(f"Userbot clone dengan ID {clone_id} berhasil dihapus.")
+        if os.path.exists(clone_id) and clone_id.startswith('clone_') and clone_id.endswith('.json'):
+            os.remove(clone_id)
+            await event.respond(f"Userbot clone {clone_id} berhasil dihapus.")
         else:
             await event.respond('ID userbot clone tidak valid.')
     else:
         await event.respond('Fitur ini hanya dapat digunakan oleh admin utama.')
 
-# Start Bot
-client.start()
-client.run_until_disconnected()
+# Menjalankan Client Telegram
+async def main():
+    await client.start()
+    await client.run_until_disconnected()
+
+# Memuat pesan dan waktu delay saat pertama kali dijalankan
+load_messages()
+
+# Menjalankan program
+if __name__ == '__main__':
+    client.loop.run_until_complete(main())
