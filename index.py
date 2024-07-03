@@ -14,6 +14,7 @@ api_hash = 'a581331dabc5d4b7e0c7381a97dde824'
 client = TelegramClient('userbot', api_id, api_hash)
 
 # Variabel Global
+forward_list = []
 messages = []
 delay_times = []
 sending = False
@@ -66,46 +67,44 @@ async def help(event):
 def is_admin(user_id): 
     return user_id in admins
 
-@client.on(events.NewMessage(pattern=r'\.add'))
-async def add(event):
+@client.on(events.NewMessage(pattern='.add'))
+async def add_forward(event):
     if is_admin(event.sender_id):
-        reply = await event.get_reply_message()
-        if reply:
+        if event.reply_to_msg_id:
+            reply_message = await event.get_reply_message()
             message_data = {
-                'text': reply.raw_text,
+                'text': reply_message.raw_text,
                 'media': None,
-                'caption': reply.raw_text,
+                'caption': reply_message.raw_text,
                 'entities': []
             }
             
             # Tambahkan entities
-            if reply.entities:
-                for entity in reply.entities:
+            if reply_message.entities:
+                for entity in reply_message.entities:
                     message_data['entities'].append({
                         'type': entity.__class__.__name__,
                         'offset': entity.offset,
                         'length': entity.length
                     })
             
-            if reply.media:
+            if reply_message.media:
                 media_data = {
-                    'type': reply.media.__class__.__name__.replace('MessageMedia', '').lower(),
-                    'file': await client.download_media(reply.media),
-                    'caption': reply.raw_text,
+                    'type': reply_message.media.__class__.__name__.replace('MessageMedia', '').lower(),
+                    'file': await client.download_media(reply_message.media),
+                    'caption': reply_message.raw_text,
                     'entities': message_data['entities']
                 }
                 message_data['media'] = media_data
             
-            messages.append(message_data)
-            
-            with open('messages.json', 'w') as f:
-                json.dump(messages, f, default=json_serial)
-            
-            await event.respond('Pesan berhasil ditambahkan.')
+            forward_list.append(message_data)
+            save_forward_list(forward_list)
+            await event.respond(f'✅ *Pesan ditambahkan ke daftar forward:*\n\n```{reply_message.raw_text or "Media"}```', parse_mode='Markdown')
         else:
-            await event.respond('Harap reply ke pesan yang ingin ditambahkan.')
+            await event.respond('⚠️ *Balas ke pesan yang ingin ditambahkan ke daftar forward.*', parse_mode='Markdown')
     else:
-        await event.respond('Fitur ini hanya dapat digunakan oleh admin utama.')
+        await event.respond('❌ *Anda tidak memiliki akses untuk menggunakan bot ini.*', parse_mode='Markdown')
+    raise events.StopPropagation
 
 @client.on(events.NewMessage(pattern=r'\.mulai'))
 async def mulai(event):
