@@ -65,7 +65,6 @@ def is_admin(user_id):
     return user_id in admins
 
 # Fitur .add
-@clie# Fitur .add
 @client.on(events.NewMessage(pattern=r'\.add'))
 async def add(event):
     if is_admin(event.sender_id):
