@@ -2,7 +2,7 @@ import json
 import asyncio
 import os
 from telethon import TelegramClient, events
-from telethon.tl.types import MessageMediaPhoto, MessageMediaDocument, MessageMediaVideo
+from telethon.tl.types import MessageMediaPhoto, MessageMediaDocument
 from telethon.errors.rpcerrorlist import PhoneNumberInvalidError, PhoneCodeInvalidError, FloodWaitError
 
 # Konfigurasi API Telegram
@@ -75,7 +75,7 @@ async def add(event):
                 'text': reply.message,
                 'media': None,
                 'caption': reply.raw_text,
-                'formatted_text': reply.text
+                'formatted_text': processed_text
             }
             if reply.media:
                 if isinstance(reply.media, MessageMediaPhoto):
