@@ -1,3 +1,7 @@
+# source by @hiyaok
+# telegram => @hiyaok
+
+#jgn otak atik 
 import json
 import asyncio
 import os
@@ -7,18 +11,18 @@ from telethon.errors.rpcerrorlist import PhoneNumberInvalidError, PhoneCodeInval
 from datetime import datetime
 
 # Konfigurasi API Telegram
-api_id = '28356794'
-api_hash = 'a581331dabc5d4b7e0c7381a97dde824'
+api_id = '' #ganti api id
+api_hash = '' #ganti sama api hash
 
 # Inisialisasi Telegram Client
 client = TelegramClient('userbot', api_id, api_hash)
 
-# Variabel Global
+# variabel
 forward_list = []
 messages = []
 delay_times = []
 is_forwarding = False
-admins = [5988451717]  # Ganti dengan ID admin utama Anda
+admins = [123456]  # Ganti dengan ID admin utama Anda
 
 # Membaca Pesan dari File JSON
 def load_messages():
@@ -45,22 +49,22 @@ def json_serial(obj):
 @client.on(events.NewMessage(pattern=r'\.start'))
 async def start(event):
     user = await event.get_sender()
-    await event.respond(f'Hai @{user.username}, saya adalah userbot sebar list')
+    await event.respond(f'🖐🏻 Hallo @{user.username} saya adalah userbot sebar list\n\n➡️ /help untuk list fitur')
 
 # Fitur .help
 @client.on(events.NewMessage(pattern=r'\.help'))
 async def help(event):
     help_text = (
-        "Daftar Fitur:\n"
-        ".start - Menyapa user\n"
-        ".help - Menampilkan bantuan\n"
-        ".add - Menambahkan pesan ke daftar\n"
-        ".mulai - Memulai pengiriman pesan ke grup\n"
-        ".setdelay <index> <waktu> - Mengatur jeda waktu pengiriman pesan\n"
-        ".stop - Menghentikan pengiriman pesan\n"
-        ".group - Menampilkan daftar grup yang diikuti userbot\n"
-        ".ceklist - Menampilkan daftar pesan yang tersimpan\n"
-        ".dellist <index> - Menghapus pesan dari daftar berdasarkan index\n"
+        "Daftar Fitur ⛱:\n"
+        ".start - Menyapa user 🖐🏻\n"
+        ".help - Menampilkan bantuan 😎\n"
+        ".add - Menambahkan pesan ke daftar 📁\n"
+        ".send - Memulai pengiriman pesan ke grup ⚡\n"
+        ".setdelay <index> <waktu> - Mengatur jeda waktu pengiriman masing pesan 🔥\n"
+        ".stop - Menghentikan pengiriman pesan ❗\n"
+        ".group - Menampilkan daftar grup yang diikuti userbot 🔥\n"
+        ".ceklist - Menampilkan daftar pesan yang tersimpan 🔐\n"
+        ".dellist <index> - Menghapus pesan dari daftar berdasarkan index 🔥\n"
         ".clone - Membuat userbot clone\n"
         ".listclone - Menampilkan daftar userbot clone yang aktif\n"
         ".delclone <clone_id> - Menghapus userbot clone berdasarkan ID\n"
@@ -112,7 +116,7 @@ async def add_forward(event):
     raise events.StopPropagation
 
 # Handler untuk mulai mengirim pesan
-@client.on(events.NewMessage(pattern='.mulai'))
+@client.on(events.NewMessage(pattern='.send'))
 async def mulai_forward(event):
     if is_admin(event.sender_id):
         global is_forwarding
@@ -120,7 +124,7 @@ async def mulai_forward(event):
             await event.respond('⚠️ Pengiriman pesan otomatis sudah berjalan', parse_mode='Markdown')
             return
         is_forwarding = True
-        await event.respond('Oke otw kirim')
+        await event.respond('Oke otw kirim 🔥')
         while is_forwarding:
             for msg in forward_list:
                 for dialog in await client.get_dialogs():
@@ -131,11 +135,11 @@ async def mulai_forward(event):
                             else:
                                 await client.send_message(dialog.id, msg['text'], entities=msg['entities'])
                     except Exception as e:
-                        print(f"Error mengirim pesan ke grup/channel {dialog.title}: {e}")
+                        print(f"Error mengirim pesan ke grup {dialog.title}: {e}")
                 await asyncio.sleep(delay_times[forward_list.index(msg)] if forward_list.index(msg) < len(delay_times) else 5)
             await asyncio.sleep(5)
     else:
-        await event.respond('❌ *Anda tidak memiliki akses untuk menggunakan bot ini.*', parse_mode='Markdown')
+        await event.respond('❌ Anda tidak memiliki akses untuk menggunakan bot ini', parse_mode='Markdown')
     raise events.StopPropagation
 
 # Handler untuk cek daftar pesan
