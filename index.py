@@ -22,7 +22,7 @@ forward_list = []
 messages = []
 delay_times = []
 is_forwarding = False
-admins = [123456]  # Ganti dengan ID admin utama Anda
+admins = [5988451717]  # Ganti dengan ID admin utama Anda
 
 # Membaca Pesan dari File JSON
 def load_messages():
@@ -65,9 +65,15 @@ async def help(event):
         ".group - Menampilkan daftar grup yang diikuti userbot 🔥\n"
         ".ceklist - Menampilkan daftar pesan yang tersimpan 🔐\n"
         ".dellist <index> - Menghapus pesan dari daftar berdasarkan index 🔥\n"
-        ".clone - Membuat userbot clone\n"
-        ".listclone - Menampilkan daftar userbot clone yang aktif\n"
-        ".delclone <clone_id> - Menghapus userbot clone berdasarkan ID\n"
+        ".join [ link group ] untuk userbot join group 💡\n"
+        ".kick [ id group ] [ id user ] untuk kick user di group 🗿\n"
+        ".addmember [ id group ] [ id user ] invite user ke group 🗿\n"
+        ".cekspeed - untuk cek speed userbot ⚡\n"
+        ".setnamegroup [ id group ] [ name new ] untuk set name group 💡\n"
+        ".ban - ban user dari group kamu 🔥\n"
+        ".unban - unban user dari group kamu 💡\n"
+        ".mute - mute pengguna dari group kamu 🔥\n"
+        ".unmute - unmute pengguna dari group kamu 🔥\n"
     )
     await event.respond(help_text)
 
@@ -76,7 +82,7 @@ def is_admin(user_id):
     return user_id in admins
 
 # Handler untuk menambah pesan ke daftar forward
-@client.on(events.NewMessage(pattern='.addforward'))
+@client.on(events.NewMessage(pattern='\.add'))
 async def add_forward(event):
     if is_admin(event.sender_id):
         if event.reply_to_msg_id:
@@ -116,7 +122,7 @@ async def add_forward(event):
     raise events.StopPropagation
 
 # Handler untuk mulai mengirim pesan
-@client.on(events.NewMessage(pattern='.send'))
+@client.on(events.NewMessage(pattern='\.send'))
 async def mulai_forward(event):
     if is_admin(event.sender_id):
         global is_forwarding
@@ -198,91 +204,142 @@ async def stop(event):
         await event.respond('Fitur ini hanya dapat digunakan oleh admin utama.')
 
 # Fitur .group
-@client.on(events.NewMessage(pattern=r'\.group'))
-async def group(event):
-    if is_admin(event.sender_id):
-        group_list = []
-        async for dialog in client.iter_dialogs():
-            if dialog.is_group:
-                group_list.append(dialog.title)
-        group_text = "Grup yang diikuti userbot:\n" + "\n".join(group_list)
-        await event.respond(group_text)
+@client.on(events.NewMessage(pattern='\.group'))
+async def list_groups(event):
+    if event.sender_id == int(admin_id):
+        dialogs = await client.get_dialogs()
+        groups = [dialog for dialog in dialogs if dialog.is_group]
+        group_list = "\n".join([f"{i+1}. {group.name} - `{group.id}`" for i, group in enumerate(groups)])
+        await event.respond(f'📋 Daftar grup\n\n{group_list}', parse_mode='Markdown')
     else:
-        await event.respond('Fitur ini hanya dapat digunakan oleh admin utama.')
+        await event.respond('❌ *Anda tidak memiliki akses untuk menggunakan bot ini.*', parse_mode='Markdown')
+    raise events.StopPropagation
 
-# Handler untuk meminta informasi cloning
-@client.on(events.NewMessage(pattern=r'\.clone'))
-async def clone(event):
-    if is_admin(event.sender_id):
-        await event.respond('Silakan masukkan nomor telepon yang ingin digunakan untuk cloning:')
-        @client.on(events.NewMessage(from_users=admins))
-        async def get_phone_number(event_phone):
-            phone_number = event_phone.message.message
-            await event.respond('Silakan masukkan kode OTP yang diterima:')
-            @client.on(events.NewMessage(from_users=admins))
-            async def get_otp_code(event_otp):
-                otp_code = event_otp.message.message
-                try:
-                    new_client = TelegramClient(f'userbot_clone_{event_phone.sender_id}', api_id, api_hash)
-                    await new_client.start(phone_number, otp_code)
-                    clone_data = {
-                        'phone_number': phone_number,
-                        'admin_id': event_phone.sender_id,
-                        'api_id': api_id,
-                        'api_hash': api_hash,
-                        'clone_id': event_phone.sender_id,
-                        'created': str(datetime.now())
-                    }
-                    clone_file = f'clone_{event_phone.sender_id}.json'
-                    with open(clone_file, 'w') as f:
-                        json.dump(clone_data, f)
-                    await event_phone.respond('Userbot clone berhasil dibuat.')
-                except PhoneNumberInvalidError:
-                    await event_phone.respond('Nomor telepon tidak valid.')
-                except PhoneCodeInvalidError:
-                    await event_phone.respond('Kode OTP tidak valid.')
-                except FloodWaitError as e:
-                    await event_phone.respond(f'Harap tunggu {e.seconds} detik sebelum mencoba lagi.')
+@client.on(events.NewMessage(pattern='\.addmember'))
+async def add_group_member(event):
+    if event.sender_id == int(admin_id):
+        try:
+            params = event.message.text.split(' ')
+            group_id = int(params[1])
+            user_id = int(params[2])
+            await client(EditBannedRequest(group_id, user_id, ChatBannedRights(until_date=None, view_messages=False)))
+            await event.respond(f'✅ Anggota berhasil ditambahkan ke grup: {group_id}', parse_mode='Markdown')
+        except (IndexError, ValueError):
+            await event.respond('⚠️ Gunakan format: /addmember <group_id> <user_id>', parse_mode='Markdown')
     else:
-        await event.respond('Fitur ini hanya dapat digunakan oleh admin utama.')
+        await event.respond('❌ Anda tidak memiliki akses untuk menggunakan bot ini', parse_mode='Markdown')
+    raise events.StopPropagation
 
-# Fitur .listclone
-@client.on(events.NewMessage(pattern=r'\.listclone'))
-async def listclone(event):
-    if is_admin(event.sender_id):
-        clone_list = []
-        for file in os.listdir():
-            if file.startswith('clone_') and file.endswith('.json'):
-                with open(file, 'r') as f:
-                    clone_list.append(json.load(f))
-        if clone_list:
-            clone_text = "Daftar Userbot Clone:\n"
-            for clone in clone_list:
-                clone_text += (
-                    f"Phone Number: {clone['phone_number']}\n"
-                    f"Admin ID: {clone['admin_id']}\n"
-                    f"Clone ID: {clone['clone_id']}\n"
-                    f"Created: {clone['created']}\n\n"
-                )
-            await event.respond(clone_text)
-        else:
-            await event.respond('Tidak ada userbot clone yang ditemukan.')
+@client.on(events.NewMessage(pattern='\.cekspeed'))
+async def check_speed(event):
+    if event.sender_id == int(admin_id):
+        start = time.time()
+        await event.respond('⚡ checking', parse_mode='Markdown')
+        end = time.time()
+        speed = end - start
+        await event.respond(f'⚡ kecepatan bot: {speed:.2f} detik', parse_mode='Markdown')
     else:
-        await event.respond('Fitur ini hanya dapat digunakan oleh admin utama.')
+        await event.respond('❌ Anda tidak memiliki akses untuk menggunakan bot ini.*', parse_mode='Markdown')
+    raise events.StopPropagation
 
-# Fitur .delclone
-@client.on(events.NewMessage(pattern=r'\.delclone (\d+)'))
-async def delclone(event):
-    if is_admin(event.sender_id):
-        clone_id = event.pattern_match.group(1)
-        clone_file = f'clone_{clone_id}.json'
-        if os.path.exists(clone_file):
-            os.remove(clone_file)
-            await event.respond(f'Userbot clone dengan ID {clone_id} berhasil dihapus.')
-        else:
-            await event.respond('ID clone tidak valid.')
+@client.on(events.NewMessage(pattern='\.setnamegroup'))
+async def set_group_name(event):
+    if event.sender_id == int(admin_id):
+        try:
+            params = event.message.text.split(' ', 2)
+            group_id = int(params[1])
+            new_name = params[2]
+            await client(EditTitleRequest(group_id, new_name))
+            await event.respond(f'✅ Nama grup berhasil diubah menjadi: {new_name}', parse_mode='Markdown')
+        except (IndexError, ValueError):
+            await event.respond('⚠️ Gunakan format: /setname <group_id> <nama_baru>', parse_mode='Markdown')
     else:
-        await event.respond('Fitur ini hanya dapat digunakan oleh admin utama.')
+        await event.respond('❌ Anda tidak memiliki akses untuk menggunakan bot ini', parse_mode='Markdown')
+    raise events.StopPropagation
+
+@client.on(events.NewMessage(pattern='.kick'))
+async def kick_member(event):
+    if event.sender_id == int(admin_id):
+        try:
+            params = event.message.text.split(' ')
+            group_id = int(params[1])
+            user_id = int(params[2])
+            await client(EditBannedRequest(group_id, user_id, ChatBannedRights(until_date=None, view_messages=True)))
+            await event.respond(f'✅ Anggota berhasil di-kick dari grup: {group_id}', parse_mode='Markdown')
+        except (IndexError, ValueError):
+            await event.respond('⚠️ Gunakan format: /kick <group_id> <user_id>', parse_mode='Markdown')
+    else:
+        await event.respond('❌ Anda tidak memiliki akses untuk menggunakan bot ini', parse_mode='Markdown')
+    raise events.StopPropagation
+
+@client.on(events.NewMessage(pattern='\.ban'))
+async def ban_member(event):
+    if event.sender_id == int(admin_id):
+        try:
+            params = event.message.text.split(' ')
+            group_id = int(params[1])
+            user_id = int(params[2])
+            await client(EditBannedRequest(group_id, user_id, ChatBannedRights(until_date=None, view_messages=True)))
+            await event.respond(f'✅ Anggota berhasil di-ban dari grup: {group_id}', parse_mode='Markdown')
+        except (IndexError, ValueError):
+            await event.respond('⚠️ Gunakan format: /ban <group_id> <user_id>', parse_mode='Markdown')
+    else:
+        await event.respond('❌ Anda tidak memiliki akses untuk menggunakan bot ini', parse_mode='Markdown')
+    raise events.StopPropagation
+
+@client.on(events.NewMessage(pattern='\.unban'))
+async def unban_member(event):
+    if event.sender_id == int(admin_id):
+        try:
+            params = event.message.text.split(' ')
+            group_id = int(params[1])
+            user_id = int(params[2])
+            await client(EditBannedRequest(group_id, user_id, ChatBannedRights(until_date=None, view_messages=False)))
+            await event.respond(f'✅ Anggota berhasil di-unban dari grup: {group_id}', parse_mode='Markdown')
+        except (IndexError, ValueError):
+            await event.respond('⚠️ Gunakan format: /unban <group_id> <user_id>', parse_mode='Markdown')
+    else:
+        await event.respond('❌ Anda tidak memiliki akses untuk menggunakan bot ini', parse_mode='Markdown')
+    raise events.StopPropagation
+
+@client.on(events.NewMessage(pattern='\.mute'))
+async def mute_member(event):
+    if event.sender_id == int(admin_id):
+        try:
+            _, group_id, user_id = event.message.text.split()
+            await client(EditBannedRequest(int(group_id), int(user_id), ChatBannedRights(until_date=None, send_messages=True)))
+            await event.respond(f'✅ Pengguna {user_id} dimute di grup {group_id}', parse_mode='Markdown')
+        except (IndexError, ValueError):
+            await event.respond('⚠️ Gunakan format: /mute [GROUP_ID] [USER_ID]', parse_mode='Markdown')
+    else:
+        await event.respond('❌ Anda tidak memiliki akses untuk menggunakan bot ini', parse_mode='Markdown')
+    raise events.StopPropagation
+
+@client.on(events.NewMessage(pattern='.\unmute'))
+async def unmute_member(event):
+    if event.sender_id == int(admin_id):
+        try:
+            _, group_id, user_id = event.message.text.split()
+            await client(EditBannedRequest(int(group_id), int(user_id), ChatBannedRights(until_date=None, send_messages=False)))
+            await event.respond(f'✅ Pengguna {user_id} diunmute di grup {group_id}', parse_mode='Markdown')
+        except (IndexError, ValueError):
+            await event.respond('⚠️ Gunakan format: /unmute [GROUP_ID] [USER_ID]', parse_mode='Markdown')
+    else:
+        await event.respond('❌ Anda tidak memiliki akses untuk menggunakan bot ini', parse_mode='Markdown')
+    raise events.StopPropagation
+
+@client.on(events.NewMessage(pattern='\.join'))
+async def join_group(event):
+    if event.sender_id == int(admin_id):
+        try:
+            group_link = event.message.text.split(' ')[1]
+            await client(JoinChannelRequest(group_link))
+            await event.respond(f'✅ Berhasil bergabung ke grup: {group_link}', parse_mode='Markdown')
+        except IndexError:
+            await event.respond('⚠️ Gunakan format: /join <link_grup>*', parse_mode='Markdown')
+    else:
+        await event.respond('❌ Anda tidak memiliki akses untuk menggunakan bot ini', parse_mode='Markdown')
+    raise events.StopPropagation
 
 client.start()
 client.run_until_disconnected()
