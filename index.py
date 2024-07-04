@@ -7,9 +7,9 @@ import asyncio
 import os
 import time
 from telethon import TelegramClient, events
-from telethon.tl.functions.channels import EditBannedRequest, EditTitleRequest, JoinChannelRequest, EditAdminRequest, EditPhotoRequest, InviteToChannelRequest, DeleteUserHistoryRequest
+from telethon.tl.functions.channels import EditBannedRequest, EditTitleRequest, JoinChannelRequest, EditAdminRequest, EditPhotoRequest, InviteToChannelRequest
 from telethon.tl.types import ChatBannedRights, ChatAdminRights, InputChatUploadedPhoto
-from telethon.tl.functions.channels import InviteToChannelRequest, EditBannedRequest, DeleteUserHistoryRequest, GetFullChannelRequest, EditPhotoRequest
+from telethon.tl.functions.channels import InviteToChannelRequest, EditBannedRequest, GetFullChannelRequest, EditPhotoRequest
 from telethon.tl.types import InputPeerUser, InputPeerChannel, InputChatUploadedPhoto
 from telethon.tl.types import MessageMediaPhoto, MessageMediaDocument
 from telethon.errors.rpcerrorlist import PhoneNumberInvalidError, PhoneCodeInvalidError, FloodWaitError
