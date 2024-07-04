@@ -82,7 +82,6 @@ async def help(event):
         ".setadmin - set admin 💡\n"
         ".setfotogroup - set foto group ⚡\n"
         ".deladmin - hapus kepemilikan admin 🗿\n"
-        ".clearhistory - clear history group 💡\n"
         ".unmuteall - unmute semua member group 🔥\n"
         ".muteall - mute all semua member group 🗿\n"
         ".listmember - list member group 💡\n"
@@ -391,18 +390,6 @@ async def welcome_or_farewell(event):
         await event.respond(f'👋 Selamat datang di grup, {event.user.first_name}!', parse_mode='Markdown')
     elif event.user_kicked or event.user_left:
         await event.respond(f'👋 Selamat tinggal, {event.user.first_name}.', parse_mode='Markdown')
-
-@client.on(events.NewMessage(pattern='\.clearhistory'))
-async def clear_history(event):
-    if is_admin(event.sender_id):
-        try:
-            await client(DeleteUserHistoryRequest(event.chat_id, event.sender_id))
-            await event.respond(f'✅ Riwayat chat berhasil dihapus')
-        except Exception as e:
-            await event.respond(f'❌ Terjadi kesalahan: {str(e)}')
-        else:
-        await event.respond('❌ Anda tidak memiliki akses untuk menggunakan bot ini')
-    raise events.StopPropagation
 
 @client.on(events.NewMessage(pattern='\.setfotogroup'))
 async def set_group_photo(event):
