@@ -198,7 +198,7 @@ async def setdelay(event):
 
 @client.on(events.NewMessage(pattern='\.group'))
 async def list_groups(event):
-    if await is_admin(event.sender_id):
+    if is_admin(event.sender_id):
         dialogs = await client.get_dialogs()
         groups = [dialog for dialog in dialogs if dialog.is_group]
         group_list = "\n".join([f"{i+1}. {group.name} - `{group.id}`" for i, group in enumerate(groups)])
@@ -209,7 +209,7 @@ async def list_groups(event):
 
 @client.on(events.NewMessage(pattern='\.member'))
 async def add_group_member(event):
-    if await is_admin(event.sender_id):
+    if is_admin(event.sender_id):
         try:
             params = event.message.text.split(' ')
             user_id = int(params[1])
@@ -225,7 +225,7 @@ async def add_group_member(event):
 
 @client.on(events.NewMessage(pattern='\.cekspeed'))
 async def check_speed(event):
-    if await is_admin(event.sender_id):
+    if is_admin(event.sender_id):
         start = time.time()
         await event.respond('⚡ checking', parse_mode='Markdown')
         end = time.time()
@@ -237,7 +237,7 @@ async def check_speed(event):
 
 @client.on(events.NewMessage(pattern='\.setnamegroup'))
 async def set_group_name(event):
-    if await is_admin(event.sender_id):
+    if is_admin(event.sender_id):
         try:
             new_name = event.message.text.split(' ', 1)[1]
             await client(EditTitleRequest(event.chat_id, new_name))
@@ -252,7 +252,7 @@ async def set_group_name(event):
 
 @client.on(events.NewMessage(pattern='.kick'))
 async def kick_member(event):
-    if await is_admin(event.sender_id):
+    if is_admin(event.sender_id):
         try:
             user_id = int(event.message.text.split(' ')[1])
             await client(EditBannedRequest(event.chat_id, user_id, ChatBannedRights(until_date=None, view_messages=True)))
@@ -267,7 +267,7 @@ async def kick_member(event):
 
 @client.on(events.NewMessage(pattern='\.ban'))
 async def ban_member(event):
-    if await is_admin(event.sender_id):
+    if is_admin(event.sender_id):
         try:
             user_id = int(event.message.text.split(' ')[1])
             await client(EditBannedRequest(event.chat_id, user_id, ChatBannedRights(until_date=None, view_messages=True)))
@@ -282,7 +282,7 @@ async def ban_member(event):
 
 @client.on(events.NewMessage(pattern='\.unban'))
 async def unban_member(event):
-    if await is_admin(event.sender_id):
+    if is_admin(event.sender_id):
         try:
             user_id = int(event.message.text.split(' ')[1])
             await client(EditBannedRequest(event.chat_id, user_id, ChatBannedRights(until_date=None, view_messages=False)))
@@ -297,7 +297,7 @@ async def unban_member(event):
 
 @client.on(events.NewMessage(pattern='\.mute'))
 async def mute_member(event):
-    if await is_admin(event.sender_id):
+    if is_admin(event.sender_id):
         try:
             user_id = int(event.message.text.split(' ')[1])
             await client(EditBannedRequest(event.chat_id, user_id, ChatBannedRights(until_date=None, send_messages=True)))
@@ -312,7 +312,7 @@ async def mute_member(event):
 
 @client.on(events.NewMessage(pattern='\.unmute'))
 async def unmute_member(event):
-    if await is_admin(event.sender_id):
+    if is_admin(event.sender_id):
         try:
             user_id = int(event.message.text.split(' ')[1])
             await client(EditBannedRequest(event.chat_id, user_id, ChatBannedRights(until_date=None, send_messages=False)))
@@ -327,7 +327,7 @@ async def unmute_member(event):
 
 @client.on(events.NewMessage(pattern='\.join'))
 async def join_group(event):
-    if await is_admin(event.sender_id):
+    if is_admin(event.sender_id):
         try:
             group_link = event.message.text.split(' ')[1]
             await client(JoinChannelRequest(group_link))
