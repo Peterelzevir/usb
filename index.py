@@ -315,7 +315,7 @@ async def mute_member(event):
         await event.respond('❌ Anda tidak memiliki akses untuk menggunakan bot ini', parse_mode='Markdown')
     raise events.StopPropagation
 
-@client.on(events.NewMessage(pattern='.\unmute'))
+@client.on(events.NewMessage(pattern='\.unmute'))
 async def unmute_member(event):
     if event.sender_id == int(admin_id):
         try:
