@@ -67,7 +67,7 @@ async def help(event):
         ".dellist <index> - Menghapus pesan dari daftar berdasarkan index 🔥\n"
         ".join [ link group ] untuk userbot join group 💡\n"
         ".kick [ id group ] [ id user ] untuk kick user di group 🗿\n"
-        ".addmember [ id group ] [ id user ] invite user ke group 🗿\n"
+        ".member [ id group ] [ id user ] invite user ke group 🗿\n"
         ".cekspeed - untuk cek speed userbot ⚡\n"
         ".setnamegroup [ id group ] [ name new ] untuk set name group 💡\n"
         ".ban - ban user dari group kamu 🔥\n"
@@ -215,7 +215,7 @@ async def list_groups(event):
         await event.respond('❌ *Anda tidak memiliki akses untuk menggunakan bot ini.*', parse_mode='Markdown')
     raise events.StopPropagation
 
-@client.on(events.NewMessage(pattern='\.addmember'))
+@client.on(events.NewMessage(pattern='\.member'))
 async def add_group_member(event):
     if is_admin(event.sender_id):
         try:
