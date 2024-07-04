@@ -3,8 +3,8 @@ import asyncio
 import os
 from telethon import TelegramClient, events
 from telethon.tl.types import MessageMediaPhoto, MessageMediaDocument
-from telethon.tl.types import InputMessageEntityMentionName
 from telethon.errors.rpcerrorlist import PhoneNumberInvalidError, PhoneCodeInvalidError, FloodWaitError
+from datetime import datetime
 
 # Konfigurasi API Telegram
 api_id = '28356794'
@@ -17,7 +17,7 @@ client = TelegramClient('userbot', api_id, api_hash)
 forward_list = []
 messages = []
 delay_times = []
-sending = False
+is_forwarding = False
 admins = [5988451717]  # Ganti dengan ID admin utama Anda
 
 # Membaca Pesan dari File JSON
@@ -29,7 +29,7 @@ def load_messages():
     if os.path.exists('delays.json'):
         with open('delays.json', 'r') as f:
             delay_times = json.load(f)
-            
+
 # Fungsi untuk menyimpan daftar forward ke file
 def save_forward_list(forward_list):
     with open('messages.json', 'w') as f:
@@ -61,12 +61,11 @@ async def help(event):
         ".group - Menampilkan daftar grup yang diikuti userbot\n"
         ".ceklist - Menampilkan daftar pesan yang tersimpan\n"
         ".dellist <index> - Menghapus pesan dari daftar berdasarkan index\n"
-        ".clone <api_id> <api_hash> <admin_id> <expiration_time> - Membuat userbot clone\n"
+        ".clone - Membuat userbot clone\n"
         ".listclone - Menampilkan daftar userbot clone yang aktif\n"
         ".delclone <clone_id> - Menghapus userbot clone berdasarkan ID\n"
     )
     await event.respond(help_text)
-
 
 # Fungsi untuk verifikasi admin utama 
 def is_admin(user_id): 
@@ -105,11 +104,11 @@ async def add_forward(event):
             
             forward_list.append(message_data)
             save_forward_list(forward_list)
-            await event.respond(f'✅ *Pesan ditambahkan ke daftar forward:*\n\n```{reply_message.raw_text or "Media"}```', parse_mode='Markdown')
+            await event.respond(f'✅ Pesan ditambahkan ke daftar forward:\n\n```{reply_message.raw_text or "Media"}```', parse_mode='Markdown')
         else:
-            await event.respond('⚠️ *Balas ke pesan yang ingin ditambahkan ke daftar forward.*', parse_mode='Markdown')
+            await event.respond('⚠️ Balas ke pesan yang ingin ditambahkan ke daftar forward', parse_mode='Markdown')
     else:
-        await event.respond('❌ *Anda tidak memiliki akses untuk menggunakan bot ini.*', parse_mode='Markdown')
+        await event.respond('❌ Anda tidak memiliki akses untuk menggunakan bot ini', parse_mode='Markdown')
     raise events.StopPropagation
 
 # Handler untuk mulai mengirim pesan
@@ -118,7 +117,7 @@ async def mulai_forward(event):
     if is_admin(event.sender_id):
         global is_forwarding
         if is_forwarding:
-            await event.respond('⚠️ *Pengiriman pesan otomatis sudah berjalan.*', parse_mode='Markdown')
+            await event.respond('⚠️ Pengiriman pesan otomatis sudah berjalan', parse_mode='Markdown')
             return
         is_forwarding = True
         await event.respond('Oke otw kirim')
@@ -133,8 +132,8 @@ async def mulai_forward(event):
                                 await client.send_message(dialog.id, msg['text'], entities=msg['entities'])
                     except Exception as e:
                         print(f"Error mengirim pesan ke grup/channel {dialog.title}: {e}")
-                await asyncio.sleep(delay_settings)
-            await asyncio.sleep(delay_settings)
+                await asyncio.sleep(delay_times[forward_list.index(msg)] if forward_list.index(msg) < len(delay_times) else 5)
+            await asyncio.sleep(5)
     else:
         await event.respond('❌ *Anda tidak memiliki akses untuk menggunakan bot ini.*', parse_mode='Markdown')
     raise events.StopPropagation
@@ -185,16 +184,14 @@ async def setdelay(event):
     else:
         await event.respond('Fitur ini hanya dapat digunakan oleh admin utama.')
 
-
 @client.on(events.NewMessage(pattern=r'\.stop'))
 async def stop(event):
     if is_admin(event.sender_id):
-        global sending
+        global is_forwarding
         is_forwarding = False
         await event.respond('Pengiriman pesan dihentikan.')
     else:
         await event.respond('Fitur ini hanya dapat digunakan oleh admin utama.')
-
 
 # Fitur .group
 @client.on(events.NewMessage(pattern=r'\.group'))
@@ -209,45 +206,39 @@ async def group(event):
     else:
         await event.respond('Fitur ini hanya dapat digunakan oleh admin utama.')
 
-# Fitur .clone
-@client.on(events.NewMessage(pattern=r'\.clone (\d+) (\w+) (\d+) (\d+)'))
+# Handler untuk meminta informasi cloning
+@client.on(events.NewMessage(pattern=r'\.clone'))
 async def clone(event):
     if is_admin(event.sender_id):
-        api_id = event.pattern_match.group(1)
-        api_hash = event.pattern_match.group(2)
-        admin_id = event.pattern_match.group(3)
-        expiration_time = event.pattern_match.group(4)
-        
-        # Proses pengiriman OTP
-        try:
-            phone_number = input("Masukkan nomor telepon untuk verifikasi OTP: ")
-            await client.sign_in(phone=phone_number)
-            
-            code = input("Masukkan kode OTP yang dikirimkan ke nomor tersebut: ")
-            await client.sign_in(code=code)
-            
-            # Simpan detail userbot clone ke database
-            clone_details = {
-                'api_id': api_id,
-                'api_hash': api_hash,
-                'admin_id': admin_id,
-                'expiration_time': expiration_time,
-                'messages': [],
-                'delay_times': []
-            }
-            
-            # Simpan detail ke file json terpisah untuk userbot clone
-            clone_filename = f'clone_{random.randint(1000, 9999)}.json'
-            with open(clone_filename, 'w') as f:
-                json.dump(clone_details, f, default=json_serial)
-            
-            await event.respond(f"Userbot clone berhasil dibuat dengan ID {clone_filename}.")
-        except PhoneNumberInvalidError:
-            await event.respond("Nomor telepon tidak valid.")
-        except PhoneCodeInvalidError:
-            await event.respond("Kode OTP salah.")
-        except Exception as e:
-            await event.respond(f"Terjadi kesalahan: {str(e)}")
+        await event.respond('Silakan masukkan nomor telepon yang ingin digunakan untuk cloning:')
+        @client.on(events.NewMessage(from_users=admins))
+        async def get_phone_number(event_phone):
+            phone_number = event_phone.message.message
+            await event.respond('Silakan masukkan kode OTP yang diterima:')
+            @client.on(events.NewMessage(from_users=admins))
+            async def get_otp_code(event_otp):
+                otp_code = event_otp.message.message
+                try:
+                    new_client = TelegramClient(f'userbot_clone_{event_phone.sender_id}', api_id, api_hash)
+                    await new_client.start(phone_number, otp_code)
+                    clone_data = {
+                        'phone_number': phone_number,
+                        'admin_id': event_phone.sender_id,
+                        'api_id': api_id,
+                        'api_hash': api_hash,
+                        'clone_id': event_phone.sender_id,
+                        'created': str(datetime.now())
+                    }
+                    clone_file = f'clone_{event_phone.sender_id}.json'
+                    with open(clone_file, 'w') as f:
+                        json.dump(clone_data, f)
+                    await event_phone.respond('Userbot clone berhasil dibuat.')
+                except PhoneNumberInvalidError:
+                    await event_phone.respond('Nomor telepon tidak valid.')
+                except PhoneCodeInvalidError:
+                    await event_phone.respond('Kode OTP tidak valid.')
+                except FloodWaitError as e:
+                    await event_phone.respond(f'Harap tunggu {e.seconds} detik sebelum mencoba lagi.')
     else:
         await event.respond('Fitur ini hanya dapat digunakan oleh admin utama.')
 
@@ -256,35 +247,38 @@ async def clone(event):
 async def listclone(event):
     if is_admin(event.sender_id):
         clone_list = []
-        for filename in os.listdir():
-            if filename.startswith('clone_') and filename.endswith('.json'):
-                with open(filename, 'r') as f:
-                    clone_data = json.load(f)
-                    clone_list.append(f"ID: {filename}, Admin ID: {clone_data['admin_id']}, Expiration Time: {clone_data['expiration_time']}")
-        clone_text = "Daftar Userbot Clone:\n" + "\n".join(clone_list)
-        await event.respond(clone_text)
+        for file in os.listdir():
+            if file.startswith('clone_') and file.endswith('.json'):
+                with open(file, 'r') as f:
+                    clone_list.append(json.load(f))
+        if clone_list:
+            clone_text = "Daftar Userbot Clone:\n"
+            for clone in clone_list:
+                clone_text += (
+                    f"Phone Number: {clone['phone_number']}\n"
+                    f"Admin ID: {clone['admin_id']}\n"
+                    f"Clone ID: {clone['clone_id']}\n"
+                    f"Created: {clone['created']}\n\n"
+                )
+            await event.respond(clone_text)
+        else:
+            await event.respond('Tidak ada userbot clone yang ditemukan.')
     else:
         await event.respond('Fitur ini hanya dapat digunakan oleh admin utama.')
 
 # Fitur .delclone
-@client.on(events.NewMessage(pattern=r'\.delclone (\w+)'))
+@client.on(events.NewMessage(pattern=r'\.delclone (\d+)'))
 async def delclone(event):
     if is_admin(event.sender_id):
         clone_id = event.pattern_match.group(1)
-        if os.path.exists(clone_id):
-            os.remove(clone_id)
-            await event.respond(f"Userbot clone dengan ID {clone_id} berhasil dihapus.")
+        clone_file = f'clone_{clone_id}.json'
+        if os.path.exists(clone_file):
+            os.remove(clone_file)
+            await event.respond(f'Userbot clone dengan ID {clone_id} berhasil dihapus.')
         else:
-            await event.respond('ID userbot clone tidak valid.')
+            await event.respond('ID clone tidak valid.')
     else:
         await event.respond('Fitur ini hanya dapat digunakan oleh admin utama.')
 
-# Menjalankan Client
-async def main():
-    load_messages()
-    await client.start()
-    print("Userbot berjalan...")
-    await client.run_until_disconnected()
-
-loop = asyncio.get_event_loop()
-loop.run_until_complete(main())
+client.start()
+client.run_until_disconnected()
