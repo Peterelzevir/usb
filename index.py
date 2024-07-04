@@ -244,7 +244,7 @@ async def set_group_name(event):
         await event.respond('❌ Anda tidak memiliki akses untuk menggunakan bot ini', parse_mode='Markdown')
     raise events.StopPropagation
 
-@client.on(events.NewMessage(pattern='.kick'))
+@client.on(events.NewMessage(pattern='\.kick'))
 async def kick_member(event):
     if is_admin(event.sender_id):
         try:
@@ -397,11 +397,11 @@ async def clear_history(event):
     if is_admin(event.sender_id):
         try:
             await client(DeleteUserHistoryRequest(event.chat_id, event.sender_id))
-            await event.respond(f'✅ Riwayat chat berhasil dihapus', parse mode='Markdown')
+            await event.respond(f'✅ Riwayat chat berhasil dihapus')
         except Exception as e:
-            await event.respond(f'❌ Terjadi kesalahan: {str(e)}', parse mode='Markdown')
+            await event.respond(f'❌ Terjadi kesalahan: {str(e)}')
         else:
-        await event.respond('❌ Anda tidak memiliki akses untuk menggunakan bot ini', parse mode='Markdown')
+        await event.respond('❌ Anda tidak memiliki akses untuk menggunakan bot ini')
     raise events.StopPropagation
 
 @client.on(events.NewMessage(pattern='\.setfotogroup'))
