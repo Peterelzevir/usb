@@ -11,8 +11,8 @@ from telethon.errors.rpcerrorlist import PhoneNumberInvalidError, PhoneCodeInval
 from datetime import datetime
 
 # Konfigurasi API Telegram
-api_id = '' #ganti api id
-api_hash = '' #ganti sama api hash
+api_id = '28356794' #ganti api id
+api_hash = 'a581331dabc5d4b7e0c7381a97dde824' #ganti sama api hash
 
 # Inisialisasi Telegram Client
 client = TelegramClient('userbot', api_id, api_hash)
