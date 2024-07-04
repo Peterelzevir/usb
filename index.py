@@ -304,15 +304,15 @@ async def mute_member(event):
         await event.respond('❌ Anda tidak memiliki akses untuk menggunakan bot ini', parse_mode='Markdown')
     raise events.StopPropagation
 
-@client.on(events.NewMessage(pattern='\.unmute'))
-async def unmute_member(event):
-    if is_admin(event.sender_id):
+@client.on(events.NewMessage(pattern='\.unmuteall'))
+async def unmute_all(event):
+   if is_admin(event.sender_id):
         try:
-            user_id = int(event.message.text.split(' ')[1])
-            await client(EditBannedRequest(event.chat_id, user_id, ChatBannedRights(until_date=None, send_messages=False)))
-            await event.respond(f'✅ Pengguna {user_id} diunmute di grup ini', parse_mode='Markdown')
-        except (IndexError, ValueError):
-            await event.respond('⚠️ Gunakan format: /unmute <user_id>', parse_mode='Markdown')
+            group_id = event.chat_id
+            group = await client.get_entity(group_id)
+            async for user in client.iter_participants(group):
+                await client(EditBannedRequest(group, user, ChatBannedRights(send_messages=False)))
+            await event.respond('✅ Semua anggota telah di-unmute.', parse_mode='Markdown')
         except Exception as e:
             await event.respond(f'❌ Terjadi kesalahan: {str(e)}', parse_mode='Markdown')
     else:
