@@ -368,7 +368,7 @@ async def mute_all(event):
 
 @client.on(events.NewMessage(pattern='\.unmuteall'))
 async def unmute_all(event):
-   if is_admin(event.sender_id):
+    if is_admin(event.sender_id):
         try:
             group_id = event.chat_id
             group = await client.get_entity(group_id)
