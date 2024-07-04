@@ -6,6 +6,8 @@ import json
 import asyncio
 import os
 from telethon import TelegramClient, events
+from telethon.tl.functions.channels import EditBannedRequest, EditTitleRequest, JoinChannelRequest
+from telethon.tl.types import ChatBannedRights
 from telethon.tl.types import MessageMediaPhoto, MessageMediaDocument
 from telethon.errors.rpcerrorlist import PhoneNumberInvalidError, PhoneCodeInvalidError, FloodWaitError
 from datetime import datetime
@@ -67,7 +69,7 @@ async def help(event):
         ".dellist <index> - Menghapus pesan dari daftar berdasarkan index 🔥\n"
         ".join [ link group ] untuk userbot join group 💡\n"
         ".kick [ id group ] [ id user ] untuk kick user di group 🗿\n"
-        ".member [ id group ] [ id user ] invite user ke group 🗿\n"
+        ".addmember [ id group ] [ id user ] invite user ke group 🗿\n"
         ".cekspeed - untuk cek speed userbot ⚡\n"
         ".setnamegroup [ id group ] [ name new ] untuk set name group 💡\n"
         ".ban - ban user dari group kamu 🔥\n"
@@ -194,19 +196,9 @@ async def setdelay(event):
     else:
         await event.respond('Fitur ini hanya dapat digunakan oleh admin utama.')
 
-@client.on(events.NewMessage(pattern=r'\.stop'))
-async def stop(event):
-    if is_admin(event.sender_id):
-        global is_forwarding
-        is_forwarding = False
-        await event.respond('Pengiriman pesan dihentikan.')
-    else:
-        await event.respond('Fitur ini hanya dapat digunakan oleh admin utama.')
-
-# Fitur .group
 @client.on(events.NewMessage(pattern='\.group'))
 async def list_groups(event):
-    if is_admin(event.sender_id):
+    if await is_admin(event.sender_id):
         dialogs = await client.get_dialogs()
         groups = [dialog for dialog in dialogs if dialog.is_group]
         group_list = "\n".join([f"{i+1}. {group.name} - `{group.id}`" for i, group in enumerate(groups)])
@@ -217,22 +209,23 @@ async def list_groups(event):
 
 @client.on(events.NewMessage(pattern='\.member'))
 async def add_group_member(event):
-    if is_admin(event.sender_id):
+    if await is_admin(event.sender_id):
         try:
             params = event.message.text.split(' ')
-            group_id = int(params[1])
-            user_id = int(params[2])
-            await client(EditBannedRequest(group_id, user_id, ChatBannedRights(until_date=None, view_messages=False)))
-            await event.respond(f'✅ Anggota berhasil ditambahkan ke grup: {group_id}', parse_mode='Markdown')
+            user_id = int(params[1])
+            await client(EditBannedRequest(event.chat_id, user_id, ChatBannedRights(until_date=None, view_messages=False)))
+            await event.respond(f'✅ Anggota berhasil ditambahkan ke grup ini', parse_mode='Markdown')
         except (IndexError, ValueError):
-            await event.respond('⚠️ Gunakan format: /addmember <group_id> <user_id>', parse_mode='Markdown')
+            await event.respond('⚠️ Gunakan format: /member <user_id>', parse_mode='Markdown')
+        except Exception as e:
+            await event.respond(f'❌ Terjadi kesalahan: {str(e)}', parse_mode='Markdown')
     else:
         await event.respond('❌ Anda tidak memiliki akses untuk menggunakan bot ini', parse_mode='Markdown')
     raise events.StopPropagation
 
 @client.on(events.NewMessage(pattern='\.cekspeed'))
 async def check_speed(event):
-    if is_admin(event.sender_id):
+    if await is_admin(event.sender_id):
         start = time.time()
         await event.respond('⚡ checking', parse_mode='Markdown')
         end = time.time()
@@ -244,99 +237,105 @@ async def check_speed(event):
 
 @client.on(events.NewMessage(pattern='\.setnamegroup'))
 async def set_group_name(event):
-    if is_admin(event.sender_id):
+    if await is_admin(event.sender_id):
         try:
-            params = event.message.text.split(' ', 2)
-            group_id = int(params[1])
-            new_name = params[2]
-            await client(EditTitleRequest(group_id, new_name))
+            new_name = event.message.text.split(' ', 1)[1]
+            await client(EditTitleRequest(event.chat_id, new_name))
             await event.respond(f'✅ Nama grup berhasil diubah menjadi: {new_name}', parse_mode='Markdown')
         except (IndexError, ValueError):
-            await event.respond('⚠️ Gunakan format: /setname <group_id> <nama_baru>', parse_mode='Markdown')
+            await event.respond('⚠️ Gunakan format: /setnamegroup <nama_baru>', parse_mode='Markdown')
+        except Exception as e:
+            await event.respond(f'❌ Terjadi kesalahan: {str(e)}', parse_mode='Markdown')
     else:
         await event.respond('❌ Anda tidak memiliki akses untuk menggunakan bot ini', parse_mode='Markdown')
     raise events.StopPropagation
 
 @client.on(events.NewMessage(pattern='.kick'))
 async def kick_member(event):
-    if is_admin(event.sender_id):
+    if await is_admin(event.sender_id):
         try:
-            params = event.message.text.split(' ')
-            group_id = int(params[1])
-            user_id = int(params[2])
-            await client(EditBannedRequest(group_id, user_id, ChatBannedRights(until_date=None, view_messages=True)))
-            await event.respond(f'✅ Anggota berhasil di-kick dari grup: {group_id}', parse_mode='Markdown')
+            user_id = int(event.message.text.split(' ')[1])
+            await client(EditBannedRequest(event.chat_id, user_id, ChatBannedRights(until_date=None, view_messages=True)))
+            await event.respond(f'✅ Anggota berhasil di-kick dari grup ini', parse_mode='Markdown')
         except (IndexError, ValueError):
-            await event.respond('⚠️ Gunakan format: /kick <group_id> <user_id>', parse_mode='Markdown')
+            await event.respond('⚠️ Gunakan format: /kick <user_id>', parse_mode='Markdown')
+        except Exception as e:
+            await event.respond(f'❌ Terjadi kesalahan: {str(e)}', parse_mode='Markdown')
     else:
         await event.respond('❌ Anda tidak memiliki akses untuk menggunakan bot ini', parse_mode='Markdown')
     raise events.StopPropagation
 
 @client.on(events.NewMessage(pattern='\.ban'))
 async def ban_member(event):
-    if is_admin(event.sender_id):
+    if await is_admin(event.sender_id):
         try:
-            params = event.message.text.split(' ')
-            group_id = int(params[1])
-            user_id = int(params[2])
-            await client(EditBannedRequest(group_id, user_id, ChatBannedRights(until_date=None, view_messages=True)))
-            await event.respond(f'✅ Anggota berhasil di-ban dari grup: {group_id}', parse_mode='Markdown')
+            user_id = int(event.message.text.split(' ')[1])
+            await client(EditBannedRequest(event.chat_id, user_id, ChatBannedRights(until_date=None, view_messages=True)))
+            await event.respond(f'✅ Anggota berhasil di-ban dari grup ini', parse_mode='Markdown')
         except (IndexError, ValueError):
-            await event.respond('⚠️ Gunakan format: /ban <group_id> <user_id>', parse_mode='Markdown')
+            await event.respond('⚠️ Gunakan format: /ban <user_id>', parse_mode='Markdown')
+        except Exception as e:
+            await event.respond(f'❌ Terjadi kesalahan: {str(e)}', parse_mode='Markdown')
     else:
         await event.respond('❌ Anda tidak memiliki akses untuk menggunakan bot ini', parse_mode='Markdown')
     raise events.StopPropagation
 
 @client.on(events.NewMessage(pattern='\.unban'))
 async def unban_member(event):
-    if is_admin(event.sender_id):
+    if await is_admin(event.sender_id):
         try:
-            params = event.message.text.split(' ')
-            group_id = int(params[1])
-            user_id = int(params[2])
-            await client(EditBannedRequest(group_id, user_id, ChatBannedRights(until_date=None, view_messages=False)))
-            await event.respond(f'✅ Anggota berhasil di-unban dari grup: {group_id}', parse_mode='Markdown')
+            user_id = int(event.message.text.split(' ')[1])
+            await client(EditBannedRequest(event.chat_id, user_id, ChatBannedRights(until_date=None, view_messages=False)))
+            await event.respond(f'✅ Anggota berhasil di-unban dari grup ini', parse_mode='Markdown')
         except (IndexError, ValueError):
-            await event.respond('⚠️ Gunakan format: /unban <group_id> <user_id>', parse_mode='Markdown')
+            await event.respond('⚠️ Gunakan format: /unban <user_id>', parse_mode='Markdown')
+        except Exception as e:
+            await event.respond(f'❌ Terjadi kesalahan: {str(e)}', parse_mode='Markdown')
     else:
         await event.respond('❌ Anda tidak memiliki akses untuk menggunakan bot ini', parse_mode='Markdown')
     raise events.StopPropagation
 
 @client.on(events.NewMessage(pattern='\.mute'))
 async def mute_member(event):
-    if is_admin(event.sender_id):
+    if await is_admin(event.sender_id):
         try:
-            _, group_id, user_id = event.message.text.split()
-            await client(EditBannedRequest(int(group_id), int(user_id), ChatBannedRights(until_date=None, send_messages=True)))
-            await event.respond(f'✅ Pengguna {user_id} dimute di grup {group_id}', parse_mode='Markdown')
+            user_id = int(event.message.text.split(' ')[1])
+            await client(EditBannedRequest(event.chat_id, user_id, ChatBannedRights(until_date=None, send_messages=True)))
+            await event.respond(f'✅ Pengguna {user_id} dimute di grup ini', parse_mode='Markdown')
         except (IndexError, ValueError):
-            await event.respond('⚠️ Gunakan format: /mute [GROUP_ID] [USER_ID]', parse_mode='Markdown')
+            await event.respond('⚠️ Gunakan format: /mute <user_id>', parse_mode='Markdown')
+        except Exception as e:
+            await event.respond(f'❌ Terjadi kesalahan: {str(e)}', parse_mode='Markdown')
     else:
         await event.respond('❌ Anda tidak memiliki akses untuk menggunakan bot ini', parse_mode='Markdown')
     raise events.StopPropagation
 
 @client.on(events.NewMessage(pattern='\.unmute'))
 async def unmute_member(event):
-    if is_admin(event.sender_id):
+    if await is_admin(event.sender_id):
         try:
-            _, group_id, user_id = event.message.text.split()
-            await client(EditBannedRequest(int(group_id), int(user_id), ChatBannedRights(until_date=None, send_messages=False)))
-            await event.respond(f'✅ Pengguna {user_id} diunmute di grup {group_id}', parse_mode='Markdown')
+            user_id = int(event.message.text.split(' ')[1])
+            await client(EditBannedRequest(event.chat_id, user_id, ChatBannedRights(until_date=None, send_messages=False)))
+            await event.respond(f'✅ Pengguna {user_id} diunmute di grup ini', parse_mode='Markdown')
         except (IndexError, ValueError):
-            await event.respond('⚠️ Gunakan format: /unmute [GROUP_ID] [USER_ID]', parse_mode='Markdown')
+            await event.respond('⚠️ Gunakan format: /unmute <user_id>', parse_mode='Markdown')
+        except Exception as e:
+            await event.respond(f'❌ Terjadi kesalahan: {str(e)}', parse_mode='Markdown')
     else:
         await event.respond('❌ Anda tidak memiliki akses untuk menggunakan bot ini', parse_mode='Markdown')
     raise events.StopPropagation
 
 @client.on(events.NewMessage(pattern='\.join'))
 async def join_group(event):
-    if is_admin(event.sender_id):
+    if await is_admin(event.sender_id):
         try:
             group_link = event.message.text.split(' ')[1]
             await client(JoinChannelRequest(group_link))
             await event.respond(f'✅ Berhasil bergabung ke grup: {group_link}', parse_mode='Markdown')
         except IndexError:
-            await event.respond('⚠️ Gunakan format: /join <link_grup>*', parse_mode='Markdown')
+            await event.respond('⚠️ Gunakan format: /join <link_grup>', parse_mode='Markdown')
+        except Exception as e:
+            await event.respond(f'❌ Terjadi kesalahan: {str(e)}', parse_mode='Markdown')
     else:
         await event.respond('❌ Anda tidak memiliki akses untuk menggunakan bot ini', parse_mode='Markdown')
     raise events.StopPropagation
