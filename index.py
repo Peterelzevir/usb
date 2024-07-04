@@ -49,13 +49,13 @@ def json_serial(obj):
 @client.on(events.NewMessage(pattern=r'\.start'))
 async def start(event):
     user = await event.get_sender()
-    await event.respond(f'🖐🏻 Hallo @{user.username} saya adalah userbot sebar list\n\n➡️ /help untuk list fitur')
+    await event.respond(f'🖐🏻 Hallo @{user.username} saya adalah userbot sebar list\n\n➡️ .help untuk list fitur')
 
 # Fitur .help
 @client.on(events.NewMessage(pattern=r'\.help'))
 async def help(event):
     help_text = (
-        "Daftar Fitur ⛱:\n"
+        "Daftar Fitur ⛱:\n\n"
         ".start - Menyapa user 🖐🏻\n"
         ".help - Menampilkan bantuan 😎\n"
         ".add - Menambahkan pesan ke daftar 📁\n"
