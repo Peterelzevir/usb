@@ -342,7 +342,7 @@ async def mute_all(event):
             group_id = event.chat_id
             group = await client.get_entity(group_id)
             async for user in client.iter_participants(group):
-                await client(EditBannedRequest(group, user, ChatBannedRights(send_messages=True)))
+                await client(EditBannedRequest(group, user.id, ChatBannedRights(send_messages=True)))
             await event.respond('✅ Semua anggota telah di-mute.', parse_mode='Markdown')
         except Exception as e:
             await event.respond(f'❌ Terjadi kesalahan: {str(e)}', parse_mode='Markdown')
@@ -357,7 +357,7 @@ async def unmute_all(event):
             group_id = event.chat_id
             group = await client.get_entity(group_id)
             async for user in client.iter_participants(group):
-                await client(EditBannedRequest(group, user, ChatBannedRights(send_messages=False)))
+                await client(EditBannedRequest(group, user.id, ChatBannedRights(send_messages=False)))
             await event.respond('✅ Semua anggota telah di-unmute.', parse_mode='Markdown')
         except Exception as e:
             await event.respond(f'❌ Terjadi kesalahan: {str(e)}', parse_mode='Markdown')
@@ -374,7 +374,7 @@ async def add_group_member(event):
             user_id = int(params[2])
             user = await client.get_entity(user_id)
             group = await client.get_entity(group_id)
-            await client(InviteToChannelRequest(group, [user]))
+            await client(InviteToChannelRequest(group, [user.id]))
             await event.respond(f'✅ Anggota {user_id} berhasil ditambahkan ke grup: {group_id}', parse_mode='Markdown')
         except (IndexError, ValueError):
             await event.respond('⚠️ Gunakan format: /member <group_id> <user_id>', parse_mode='Markdown')
@@ -399,13 +399,13 @@ async def set_group_photo(event):
                 photo = await event.download_media()
                 file = await client.upload_file(photo)
                 await client(EditPhotoRequest(event.chat_id, InputChatUploadedPhoto(file)))
-                await event.respond(f'✅ Foto grup berhasil diubah', parse mode='Markdown')
+                await event.respond(f'✅ Foto grup berhasil diubah', parse_mode='Markdown')
             except Exception as e:
-                await event.respond(f'❌ Terjadi kesalahan: {str(e)}', parse mode='Markdown')
+                await event.respond(f'❌ Terjadi kesalahan: {str(e)}', parse_mode='Markdown')
         else:
-            await event.respond('⚠️ Kirim perintah ini dengan foto yang ingin diatur sebagai foto grup', parse mode='Markdown')
+            await event.respond('⚠️ Kirim perintah ini dengan foto yang ingin diatur sebagai foto grup', parse_mode='Markdown')
     else:
-        await event.respond('❌ Anda tidak memiliki akses untuk menggunakan bot ini', parse mode='Markdown')
+        await event.respond('❌ Anda tidak memiliki akses untuk menggunakan bot ini', parse_mode='Markdown')
     raise events.StopPropagation
 
 @client.on(events.NewMessage(pattern='\.setadmin'))
@@ -433,11 +433,11 @@ async def del_admin(event):
             await client(EditAdminRequest(event.chat_id, user_id, rights))
             await event.respond(f'✅ Pengguna {user_id} telah dicabut hak adminnya', parse_mode='Markdown')
         except (IndexError, ValueError):
-            await event.respond('⚠️ Gunakan format: /deladmin <user_id>', parse mode='Markdown')
+            await event.respond('⚠️ Gunakan format: /deladmin <user_id>', parse_mode='Markdown')
         except Exception as e:
-            await event.respond(f'❌ Terjadi kesalahan: {str(e)}', parse mode='Markdown')
+            await event.respond(f'❌ Terjadi kesalahan: {str(e)}', parse_mode='Markdown')
     else:
-        await event.respond('❌ Anda tidak memiliki akses untuk menggunakan bot ini', parse mode='Markdown')
+        await event.respond('❌ Anda tidak memiliki akses untuk menggunakan bot ini', parse_mode='Markdown')
     raise events.StopPropagation
 
 client.start()
