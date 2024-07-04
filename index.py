@@ -92,118 +92,159 @@ async def help(event):
 def is_admin(user_id): 
     return user_id in admins
 
-# Handler untuk menambah pesan ke daftar forward
-@client.on(events.NewMessage(pattern='\.add'))
-async def add_forward(event):
+@client.on(events.NewMessage(pattern=r'\.add'))
+async def add(event):
     if is_admin(event.sender_id):
-        if event.reply_to_msg_id:
-            reply_message = await event.get_reply_message()
+        reply = await event.get_reply_message()
+        if reply:
             message_data = {
-                'text': reply_message.raw_text,
+                'text': reply.raw_text,  # Simpan caption mentah dari pesan
                 'media': None,
-                'caption': reply_message.raw_text,
-                'entities': []
+                'caption': reply.raw_text,  # Simpan caption mentah dari pesan
+                'entities': []  # Simpan entities (format teks)
             }
             
             # Tambahkan entities
-            if reply_message.entities:
-                for entity in reply_message.entities:
+            if reply.entities:
+                for entity in reply.entities:
                     message_data['entities'].append({
                         'type': entity.__class__.__name__,
                         'offset': entity.offset,
                         'length': entity.length
                     })
             
-            if reply_message.media:
-                media_data = {
-                    'type': reply_message.media.__class__.__name__.replace('MessageMedia', '').lower(),
-                    'file': await client.download_media(reply_message.media),
-                    'caption': reply_message.raw_text,
-                    'entities': message_data['entities']
-                }
-                message_data['media'] = media_data
+            if reply.media:
+                if isinstance(reply.media, MessageMediaPhoto):
+                    media_data = {
+                        'type': 'photo',
+                        'file': await client.download_media(reply.media),
+                        'caption': reply.raw_text  # Simpan caption mentah dari media
+                    }
+                    message_data['media'] = media_data
+                elif isinstance(reply.media, MessageMediaDocument):
+                    media_data = {
+                        'type': 'document',
+                        'file': await client.download_media(reply.media),
+                        'caption': reply.raw_text  # Simpan caption mentah dari media
+                    }
+                    message_data['media'] = media_data
+                elif isinstance(reply.media, MessageMediaVideo):
+                    media_data = {
+                        'type': 'video',
+                        'file': await client.download_media(reply.media),
+                        'caption': reply.raw_text  # Simpan caption mentah dari media
+                    }
+                    message_data['media'] = media_data
+                elif isinstance(reply.media, MessageMediaGif):
+                    media_data = {
+                        'type': 'gif',
+                        'file': await client.download_media(reply.media),
+                        'caption': reply.raw_text  # Simpan caption mentah dari media
+                    }
+                    message_data['media'] = media_data
             
-            forward_list.append(message_data)
-            save_forward_list(forward_list)
-            await event.respond(f'✅ Pesan ditambahkan ke daftar forward:\n\n```{reply_message.raw_text or "Media"}```', parse_mode='Markdown')
+            messages.append(message_data)
+            
+            with open('messages.json', 'w') as f:
+                json.dump(messages, f, default=json_serial)
+            
+            await event.respond('💡 Pesan berhasil ditambahkan')
         else:
-            await event.respond('⚠️ Balas ke pesan yang ingin ditambahkan ke daftar forward', parse_mode='Markdown')
+            await event.respond('❗ Harap reply ke pesan yang ingin ditambahkan.')
     else:
-        await event.respond('❌ Anda tidak memiliki akses untuk menggunakan bot ini', parse_mode='Markdown')
-    raise events.StopPropagation
+        await event.respond('❗ Fitur ini hanya dapat digunakan oleh admin utama.')
 
-# Handler untuk mulai mengirim pesan
-@client.on(events.NewMessage(pattern='\.send'))
-async def mulai_forward(event):
+# Fitur .mulai
+@client.on(events.NewMessage(pattern=r'\.send'))
+async def mulai(event):
     if is_admin(event.sender_id):
-        global is_forwarding
-        if is_forwarding:
-            await event.respond('⚠️ Pengiriman pesan otomatis sudah berjalan', parse_mode='Markdown')
-            return
-        is_forwarding = True
+        global sending
         await event.respond('Oke otw kirim 🔥')
-        while is_forwarding:
-            for msg in forward_list:
+        sending = True
+        while sending:
+            for i, message_data in enumerate(messages):
+                if not sending:
+                    break
                 for dialog in await client.get_dialogs():
-                    try:
-                        if dialog.is_group:
-                            if msg['media']:
-                                await client.send_file(dialog.id, msg['media']['file'], caption=msg['caption'], entities=msg['entities'])
+                    if dialog.is_group:
+                        try:
+                            if message_data['media']:
+                                media_type = message_data['media']['type']
+                                media_file = message_data['media']['file']
+                                media_caption = message_data['media']['caption']
+                                if media_type == 'photo':
+                                    await client.send_file(dialog.id, media_file, caption=media_caption)
+                                elif media_type == 'document':
+                                    await client.send_file(dialog.id, media_file, caption=media_caption)
+                                elif media_type == 'video':
+                                    await client.send_file(dialog.id, media_file, caption=media_caption)
+                                elif media_type == 'gif':
+                                    await client.send_file(dialog.id, media_file, caption=media_caption)
                             else:
-                                await client.send_message(dialog.id, msg['text'], entities=msg['entities'])
-                    except Exception as e:
-                        print(f"Error mengirim pesan ke grup {dialog.title}: {e}")
-                await asyncio.sleep(delay_times[forward_list.index(msg)] if forward_list.index(msg) < len(delay_times) else 5)
-            await asyncio.sleep(5)
+                                # Menggunakan formatted_text untuk pesan teks
+                                await client.send_message(dialog.id, message_data['formatted_text'])
+                        except Exception as e:
+                            print(f"Error mengirim pesan ke grup {dialog.title}: {e}")
+                await asyncio.sleep(delay_times[i] if i < len(delay_times) else 5)
     else:
-        await event.respond('❌ Anda tidak memiliki akses untuk menggunakan bot ini', parse_mode='Markdown')
-    raise events.StopPropagation
+        await event.respond('💡 Fitur ini hanya dapat digunakan oleh admin utama')
 
-# Handler untuk cek daftar pesan
+# Fitur .setdelay
+@client.on(events.NewMessage(pattern=r'\.setdelay (\d+) (\d+)'))
+async def setdelay(event):
+    if is_admin(event.sender_id):
+        index = int(event.pattern_match.group(1))
+        waktu = int(event.pattern_match.group(2))
+        if index < len(messages):
+            if len(delay_times) <= index:
+                delay_times.extend([5] * (index - len(delay_times) + 1))
+            delay_times[index] = waktu
+            with open('delays.json', 'w') as f:
+                json.dump(delay_times, f)
+            await event.respond(f'💡 Delay pesan ke-{index} diatur ke {waktu} detik')
+        else:
+            await event.respond('❗ Index pesan tidak valid')
+    else:
+        await event.respond('❗ Fitur ini hanya dapat digunakan oleh admin utama')
+
+# Fitur .stop
+@client.on(events.NewMessage(pattern=r'\.stop'))
+async def stop(event):
+    if is_admin(event.sender_id):
+        global sending
+        sending = False
+        await event.respond('💡 Pengiriman pesan dihentikan')
+    else:
+        await event.respond('❗ Fitur ini hanya dapat digunakan oleh admin utama')
+
+# Fitur .ceklist
 @client.on(events.NewMessage(pattern=r'\.ceklist'))
 async def ceklist(event):
     if is_admin(event.sender_id):
-        list_text = "Daftar Pesan:\n"
-        for i, message_data in enumerate(forward_list):
+        list_text = "🔥 Daftar Pesan :\nnote : khusus set pesan dengan media walaupun di list tidak tampil namun aslinya ada ya\n\n"
+        for i, message_data in enumerate(messages):
             if 'text' in message_data:
                 list_text += f"{i}: {message_data['text']}\n"
             elif 'formatted_text' in message_data:
                 list_text += f"{i}: {message_data['formatted_text']}\n"
         await event.respond(list_text)
     else:
-        await event.respond('Fitur ini hanya dapat digunakan oleh admin utama.')
+        await event.respond('❗ Fitur ini hanya dapat digunakan oleh admin utama')
 
-# Handler untuk menghapus pesan dari daftar
+# Fitur .dellist
 @client.on(events.NewMessage(pattern=r'\.dellist (\d+)'))
 async def dellist(event):
     if is_admin(event.sender_id):
         index = int(event.pattern_match.group(1))
-        if index < len(forward_list):
-            deleted_message = forward_list.pop(index)
-            save_forward_list(forward_list)
-            await event.respond(f'Pesan ke-{index} berhasil dihapus:\n\n{deleted_message["text"] if "text" in deleted_message else "Media"}')
+        if 0 <= index < len(messages):
+            del messages[index]
+            with open('messages.json', 'w') as f:
+                json.dump(messages, f, default=json_serial)
+            await event.respond(f"Pesan pada index {index} berhasil dihapus 📂")
         else:
-            await event.respond('Index pesan tidak valid.')
+            await event.respond('❗ Index pesan tidak valid')
     else:
-        await event.respond('Fitur ini hanya dapat digunakan oleh admin utama.')
-
-# Handler untuk mengatur delay masing-masing pesan
-@client.on(events.NewMessage(pattern=r'\.setdelay (\d+) (\d+)'))
-async def setdelay(event):
-    if is_admin(event.sender_id):
-        index = int(event.pattern_match.group(1))
-        waktu = int(event.pattern_match.group(2))
-        if index < len(forward_list):
-            if len(delay_times) <= index:
-                delay_times.extend([5] * (index - len(delay_times) + 1))
-            delay_times[index] = waktu
-            with open('delays.json', 'w') as f:
-                json.dump(delay_times, f)
-            await event.respond(f'Delay pesan ke-{index} diatur ke {waktu} detik.')
-        else:
-            await event.respond('Index pesan tidak valid.')
-    else:
-        await event.respond('Fitur ini hanya dapat digunakan oleh admin utama.')
+        await event.respond('❗ Fitur ini hanya dapat digunakan oleh admin utama')
 
 @client.on(events.NewMessage(pattern='\.group'))
 async def list_groups(event):
