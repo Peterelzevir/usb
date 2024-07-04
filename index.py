@@ -400,7 +400,7 @@ async def clear_history(event):
             await event.respond(f'✅ Riwayat chat berhasil dihapus', parse mode='Markdown')
         except Exception as e:
             await event.respond(f'❌ Terjadi kesalahan: {str(e)}', parse mode='Markdown')
-    else:
+        else:
         await event.respond('❌ Anda tidak memiliki akses untuk menggunakan bot ini', parse mode='Markdown')
     raise events.StopPropagation
 
