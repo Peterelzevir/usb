@@ -71,10 +71,10 @@ async def help(event):
         ".ceklist - Menampilkan daftar pesan yang tersimpan 🔐\n"
         ".dellist <index> - Menghapus pesan dari daftar berdasarkan index 🔥\n"
         ".join [ link group ] untuk userbot join group 💡\n"
-        ".kick [ id group ] [ id user ] untuk kick user di group 🗿\n"
-        ".addmember [ id group ] [ id user ] invite user ke group 🗿\n"
+        ".kick [ id user ] untuk kick user di group 🗿\n"
+        ".member [ id user ] invite user ke group 🗿\n"
         ".cekspeed - untuk cek speed userbot ⚡\n"
-        ".setnamegroup [ id group ] [ name new ] untuk set name group 💡\n"
+        ".setnamegroup [ name new ] untuk set name group 💡\n"
         ".ban - ban user dari group kamu 🔥\n"
         ".unban - unban user dari group kamu 💡\n"
         ".mute - mute pengguna dari group kamu 🔥\n"
@@ -82,8 +82,8 @@ async def help(event):
         ".setadmin - set admin 💡\n"
         ".setfotogroup - set foto group ⚡\n"
         ".deladmin - hapus kepemilikan admin 🗿\n"
-        ".unmuteall - unmute semua member group 🔥\n"
-        ".muteall - mute all semua member group 🗿\n"
+        ".bukaall - unmute semua member group 🔥\n"
+        ".diemall - mute all semua member group 🗿\n"
         ".listmember - list member group 💡\n"
     )
     await event.respond(help_text)
@@ -236,7 +236,7 @@ async def set_group_name(event):
             await client(EditTitleRequest(event.chat_id, new_name))
             await event.respond(f'✅ Nama grup berhasil diubah menjadi: {new_name}', parse_mode='Markdown')
         except (IndexError, ValueError):
-            await event.respond('⚠️ Gunakan format: /setnamegroup <nama_baru>', parse_mode='Markdown')
+            await event.respond('⚠️ Gunakan format: .setnamegroup <nama_baru>', parse_mode='Markdown')
         except Exception as e:
             await event.respond(f'❌ Terjadi kesalahan: {str(e)}', parse_mode='Markdown')
     else:
@@ -251,7 +251,7 @@ async def kick_member(event):
             await client(EditBannedRequest(event.chat_id, user_id, ChatBannedRights(until_date=None, view_messages=True)))
             await event.respond(f'✅ Anggota berhasil di-kick dari grup ini', parse_mode='Markdown')
         except (IndexError, ValueError):
-            await event.respond('⚠️ Gunakan format: /kick <user_id>', parse_mode='Markdown')
+            await event.respond('⚠️ Gunakan format: .kick <user_id>', parse_mode='Markdown')
         except Exception as e:
             await event.respond(f'❌ Terjadi kesalahan: {str(e)}', parse_mode='Markdown')
     else:
@@ -266,7 +266,7 @@ async def ban_member(event):
             await client(EditBannedRequest(event.chat_id, user_id, ChatBannedRights(until_date=None, view_messages=True)))
             await event.respond(f'✅ Anggota berhasil di-ban dari grup ini', parse_mode='Markdown')
         except (IndexError, ValueError):
-            await event.respond('⚠️ Gunakan format: /ban <user_id>', parse_mode='Markdown')
+            await event.respond('⚠️ Gunakan format: .ban <user_id>', parse_mode='Markdown')
         except Exception as e:
             await event.respond(f'❌ Terjadi kesalahan: {str(e)}', parse_mode='Markdown')
     else:
@@ -281,7 +281,7 @@ async def unban_member(event):
             await client(EditBannedRequest(event.chat_id, user_id, ChatBannedRights(until_date=None, view_messages=False)))
             await event.respond(f'✅ Anggota berhasil di-unban dari grup ini', parse_mode='Markdown')
         except (IndexError, ValueError):
-            await event.respond('⚠️ Gunakan format: /unban <user_id>', parse_mode='Markdown')
+            await event.respond('⚠️ Gunakan format: .unban <user_id>', parse_mode='Markdown')
         except Exception as e:
             await event.respond(f'❌ Terjadi kesalahan: {str(e)}', parse_mode='Markdown')
     else:
@@ -296,7 +296,7 @@ async def mute_member(event):
             await client(EditBannedRequest(event.chat_id, user_id, ChatBannedRights(until_date=None, send_messages=True)))
             await event.respond(f'✅ Pengguna {user_id} dimute di grup ini', parse_mode='Markdown')
         except (IndexError, ValueError):
-            await event.respond('⚠️ Gunakan format: /mute <user_id>', parse_mode='Markdown')
+            await event.respond('⚠️ Gunakan format: .mute <user_id>', parse_mode='Markdown')
         except Exception as e:
             await event.respond(f'❌ Terjadi kesalahan: {str(e)}', parse_mode='Markdown')
     else:
@@ -311,7 +311,7 @@ async def join_group(event):
             await client(JoinChannelRequest(group_link))
             await event.respond(f'✅ Berhasil bergabung ke grup: {group_link}', parse_mode='Markdown')
         except IndexError:
-            await event.respond('⚠️ Gunakan format: /join <link_grup>', parse_mode='Markdown')
+            await event.respond('⚠️ Gunakan format: .join <link_grup>', parse_mode='Markdown')
         except Exception as e:
             await event.respond(f'❌ Terjadi kesalahan: {str(e)}', parse_mode='Markdown')
     else:
@@ -335,7 +335,7 @@ async def list_members(event):
         await event.respond('❌ Anda tidak memiliki akses untuk menggunakan bot ini', parse_mode='Markdown')
     raise events.StopPropagation
 
-@client.on(events.NewMessage(pattern='\.muteall'))
+@client.on(events.NewMessage(pattern='\.diemall'))
 async def mute_all(event):
     if is_admin(event.sender_id):
         try:
@@ -350,7 +350,7 @@ async def mute_all(event):
         await event.respond('❌ Anda tidak memiliki akses untuk menggunakan bot ini', parse_mode='Markdown')
     raise events.StopPropagation
 
-@client.on(events.NewMessage(pattern='\.unmuteall'))
+@client.on(events.NewMessage(pattern='\.bukaall'))
 async def unmute_all(event):
     if is_admin(event.sender_id):
         try:
@@ -377,7 +377,7 @@ async def add_group_member(event):
             await client(InviteToChannelRequest(group, [user.id]))
             await event.respond(f'✅ Anggota {user_id} berhasil ditambahkan ke grup: {group_id}', parse_mode='Markdown')
         except (IndexError, ValueError):
-            await event.respond('⚠️ Gunakan format: /member <group_id> <user_id>', parse_mode='Markdown')
+            await event.respond('⚠️ Gunakan format: .member <group_id> <user_id>', parse_mode='Markdown')
         except Exception as e:
             await event.respond(f'❌ Terjadi kesalahan: {str(e)}', parse_mode='Markdown')
     else:
@@ -417,7 +417,7 @@ async def set_admin(event):
             await client(EditAdminRequest(event.chat_id, user_id, rights))
             await event.respond(f'✅ Pengguna {user_id} telah diangkat menjadi admin', parse_mode='Markdown')
         except (IndexError, ValueError):
-            await event.respond('⚠️ Gunakan format: /setadmin <user_id>', parse_mode='Markdown')
+            await event.respond('⚠️ Gunakan format: .setadmin <user_id>', parse_mode='Markdown')
         except Exception as e:
             await event.respond(f'❌ Terjadi kesalahan: {str(e)}', parse_mode='Markdown')
     else:
@@ -433,7 +433,7 @@ async def del_admin(event):
             await client(EditAdminRequest(event.chat_id, user_id, rights))
             await event.respond(f'✅ Pengguna {user_id} telah dicabut hak adminnya', parse_mode='Markdown')
         except (IndexError, ValueError):
-            await event.respond('⚠️ Gunakan format: /deladmin <user_id>', parse_mode='Markdown')
+            await event.respond('⚠️ Gunakan format: .deladmin <user_id>', parse_mode='Markdown')
         except Exception as e:
             await event.respond(f'❌ Terjadi kesalahan: {str(e)}', parse_mode='Markdown')
     else:
