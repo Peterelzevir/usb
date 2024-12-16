@@ -1,98 +1,14 @@
-import os
 import asyncio
-import random
-import getpass
-from telethon import TelegramClient
-from telethon.tl.functions.channels import InviteToChannelRequest, JoinChannelRequest
-from telethon.sessions import StringSession
-from telethon.errors import FloodWaitError, UserPrivacyRestrictedError
-from colorama import init, Fore, Style
+import os
 import json
-import logging
-
-# Konfigurasi logging
-logging.basicConfig(
-    level=logging.INFO,
-    format=f'{Fore.CYAN}[%(levelname)s]{Style.RESET_ALL} %(message)s',
-    handlers=[
-        logging.FileHandler("invite_log.txt"),
-        logging.StreamHandler()
-    ]
-)
+from pyrogram import Client, errors
+from pyrogram.types import User
+from colorama import Fore, Style, init
 
 init(autoreset=True)
 
-class SmartInviteManager:
-    @staticmethod
-    async def smart_invite(client, source_entity, dest_entity, members, max_invites=100):
-        """
-        Metode invite cerdas dengan berbagai strategi anti-limit
-        """
-        eligible_members = [
-            member for member in members
-            if not member.bot and member.access_hash and member.status
-        ]
 
-        random.shuffle(eligible_members)
-        invited_members = eligible_members[:max_invites]
-        
-        total_invited = 0
-        errors = {'flood': 0, 'privacy': 0, 'other': 0}
-
-        for member in invited_members:
-            try:
-                await asyncio.sleep(random.uniform(3, 7))  # Delay antara undangan
-                await client(InviteToChannelRequest(dest_entity, [member]))
-                total_invited += 1
-                logging.info(f"{Fore.GREEN}Invited: {member.username or member.first_name}{Style.RESET_ALL}")
-
-                if total_invited % 10 == 0:
-                    await asyncio.sleep(random.uniform(10, 20))  # Tambah delay setelah 10 undangan
-
-            except FloodWaitError as e:
-                errors['flood'] += 1
-                logging.warning(f"{Fore.RED}Flood wait for {e.seconds} seconds{Style.RESET_ALL}")
-                await asyncio.sleep(e.seconds + 10)
-            except UserPrivacyRestrictedError:
-                errors['privacy'] += 1
-                logging.warning(f"{Fore.YELLOW}Privacy restricted: {member.username}{Style.RESET_ALL}")
-            except Exception as e:
-                errors['other'] += 1
-                logging.error(f"{Fore.MAGENTA}Unexpected error: {e}{Style.RESET_ALL}")
-
-        logging.info(f"""
-        {Fore.BLUE}Invite Report:
-        - Total Invited: {total_invited}
-        - Flood Errors: {errors['flood']}
-        - Privacy Errors: {errors['privacy']}
-        - Other Errors: {errors['other']}
-        {Style.RESET_ALL}""")
-
-        return {'total_invited': total_invited, 'errors': errors}
-
-class TelegramAuth:
-    @staticmethod
-    async def login(api_id, api_hash, phone_number):
-        """
-        Proses login interaktif dengan Telegram
-        """
-        try:
-            client = TelegramClient(StringSession(), api_id, api_hash)
-            await client.start(phone=lambda: phone_number, code_callback=lambda: input(f"{Fore.GREEN}Masukkan kode verifikasi: {Style.RESET_ALL}"))
-            
-            # Jika 2FA diperlukan
-            if not await client.is_user_authorized():
-                password = getpass.getpass(f"{Fore.YELLOW}Masukkan password 2FA: {Style.RESET_ALL}")
-                await client.sign_in(password=password)
-
-            session_string = client.session.save()
-            logging.info(f"{Fore.GREEN}Login Berhasil!{Style.RESET_ALL}")
-            return {'client': client, 'session_string': session_string}
-        except Exception as e:
-            logging.error(f"{Fore.RED}Gagal Login: {e}{Style.RESET_ALL}")
-            return None
-
-class TelegramMemberInviteTool:
+class TelegramInviteTool:
     def __init__(self):
         self.accounts = {}
         self.config_file = 'accounts.json'
@@ -111,94 +27,112 @@ class TelegramMemberInviteTool:
             json.dump(self.accounts, f)
 
     async def add_account(self):
-        """Menambahkan akun baru dengan proses login lengkap"""
-        print(f"{Fore.CYAN}[HIYAOK] Tambah Akun Telegram{Style.RESET_ALL}")
-        
+        print(f"{Fore.CYAN}[+] Tambah Akun Telegram{Style.RESET_ALL}")
         api_id = input(f"{Fore.YELLOW}Masukkan API ID: {Style.RESET_ALL}")
         api_hash = input(f"{Fore.YELLOW}Masukkan API Hash: {Style.RESET_ALL}")
-        phone_number = input(f"{Fore.YELLOW}Masukkan Nomor Telepon (dengan kode negara): {Style.RESET_ALL}")
+        phone_number = input(f"{Fore.YELLOW}Masukkan Nomor Telepon: {Style.RESET_ALL}")
 
-        login_result = await TelegramAuth.login(int(api_id), api_hash, phone_number)
-
-        if login_result:
-            self.accounts[phone_number] = {
-                'api_id': api_id,
-                'api_hash': api_hash,
-                'session_string': login_result['session_string'],
-            }
-            self.save_accounts()
-            print(f"{Fore.GREEN}✓ Akun berhasil ditambahkan!{Style.RESET_ALL}")
-            await login_result['client'].disconnect()
-        else:
-            print(f"{Fore.RED}✗ Gagal menambahkan akun{Style.RESET_ALL}")
-
-    async def invite_process(self):
-        """Proses invite member dengan strategi cerdas"""
-        if not self.accounts:
-            print(f"{Fore.RED}✗ Tidak ada akun yang tersimpan{Style.RESET_ALL}")
-            return
-
-        print(f"{Fore.CYAN}Pilih Akun:{Style.RESET_ALL}")
-        for idx, (phone, _) in enumerate(self.accounts.items(), 1):
-            print(f"{Fore.YELLOW}{idx}. {phone}{Style.RESET_ALL}")
-
-        account_choice = int(input(f"{Fore.GREEN}Pilih nomor akun: {Style.RESET_ALL}"))
-        selected_phone = list(self.accounts.keys())[account_choice - 1]
-        selected_account = self.accounts[selected_phone]
-
-        source_group = input(f"{Fore.YELLOW}Username/link group sumber: {Style.RESET_ALL}")
-        dest_group = input(f"{Fore.YELLOW}Username/link group tujuan: {Style.RESET_ALL}")
-        max_invites = int(input(f"{Fore.YELLOW}Jumlah maksimal member untuk diundang: {Style.RESET_ALL}"))
-
-        client = TelegramClient(
-            StringSession(selected_account['session_string']),
-            int(selected_account['api_id']),
-            selected_account['api_hash']
+        app = Client(
+            f"session_{phone_number}",
+            api_id=api_id,
+            api_hash=api_hash,
+            device_model="iPhone 16 Pro Max",
+            app_version="iOS 18",
+            lang_code="id",
+            phone_number=phone_number,
         )
 
-        await client.start()
-
         try:
-            await client(JoinChannelRequest(source_group))
-            await client(JoinChannelRequest(dest_group))
-
-            source_entity = await client.get_entity(source_group)
-            dest_entity = await client.get_entity(dest_group)
-            members = await client.get_participants(source_entity)
-
-            result = await SmartInviteManager.smart_invite(client, source_entity, dest_entity, members, max_invites)
-
-            print(f"{Fore.GREEN}✓ Proses invite selesai!{Style.RESET_ALL}")
-            print(f"{Fore.CYAN}Total member diundang: {result['total_invited']}{Style.RESET_ALL}")
-
+            await app.start()
+            me: User = await app.get_me()
+            print(f"{Fore.GREEN}✓ Login berhasil! Akun: {me.first_name} ({me.id}){Style.RESET_ALL}")
+            self.accounts[phone_number] = {"api_id": api_id, "api_hash": api_hash}
+            self.save_accounts()
         except Exception as e:
-            print(f"{Fore.RED}✗ Gagal: {e}{Style.RESET_ALL}")
+            print(f"{Fore.RED}✗ Gagal login: {e}{Style.RESET_ALL}")
         finally:
-            await client.disconnect()
+            await app.stop()
+
+    async def process_invite(self):
+        if not self.accounts:
+            print(f"{Fore.RED}✗ Tidak ada akun yang tersimpan! Tambahkan akun terlebih dahulu.{Style.RESET_ALL}")
+            return
+
+        print(f"{Fore.CYAN}[+] Pilih Akun untuk Proses Undangan:{Style.RESET_ALL}")
+        for idx, phone in enumerate(self.accounts.keys(), start=1):
+            print(f"{Fore.YELLOW}{idx}. {phone}{Style.RESET_ALL}")
+
+        selected_indexes = input(
+            f"{Fore.GREEN}Masukkan nomor akun yang ingin digunakan (pisahkan dengan koma, contoh: 1,2): {Style.RESET_ALL}"
+        ).split(",")
+        selected_accounts = [list(self.accounts.keys())[int(i) - 1] for i in selected_indexes]
+
+        source_chat = input(f"{Fore.YELLOW}Masukkan username/link grup sumber: {Style.RESET_ALL}")
+        dest_chat = input(f"{Fore.YELLOW}Masukkan username/link grup tujuan: {Style.RESET_ALL}")
+        max_invites = int(input(f"{Fore.YELLOW}Jumlah maksimal undangan per akun: {Style.RESET_ALL}"))
+
+        tasks = []
+        for phone in selected_accounts:
+            tasks.append(self.invite_from_account(phone, source_chat, dest_chat, max_invites))
+        await asyncio.gather(*tasks)
+
+    async def invite_from_account(self, phone_number, source_chat, dest_chat, max_invites):
+        account = self.accounts[phone_number]
+        app = Client(
+            f"session_{phone_number}",
+            api_id=account["api_id"],
+            api_hash=account["api_hash"],
+        )
+        try:
+            await app.start()
+            source = await app.get_chat_members(source_chat)
+            dest = await app.get_chat(dest_chat)
+            members_to_invite = [member for member in source if not member.user.is_bot][:max_invites]
+
+            print(f"{Fore.CYAN}[{phone_number}] Memulai proses undangan ke {dest_chat}...{Style.RESET_ALL}")
+            for member in members_to_invite:
+                try:
+                    await asyncio.sleep(2)
+                    await app.add_chat_members(dest.id, member.user.id)
+                    print(f"{Fore.GREEN}[{phone_number}] ✓ Berhasil mengundang: {member.user.first_name}{Style.RESET_ALL}")
+                except errors.FloodWait as e:
+                    print(f"{Fore.RED}[{phone_number}] ✗ FloodWait: Menunggu {e.value} detik{Style.RESET_ALL}")
+                    await asyncio.sleep(e.value)
+                except errors.UserPrivacyRestricted:
+                    print(f"{Fore.YELLOW}[{phone_number}] ✗ Tidak bisa mengundang (privasi): {member.user.first_name}{Style.RESET_ALL}")
+                except Exception as e:
+                    print(f"{Fore.RED}[{phone_number}] ✗ Gagal mengundang {member.user.first_name}: {e}{Style.RESET_ALL}")
+        except errors.AuthKeyUnregistered:
+            print(f"{Fore.RED}[{phone_number}] ✗ Akun ini kehilangan sesi. Menghapus dari daftar akun.{Style.RESET_ALL}")
+            del self.accounts[phone_number]
+            self.save_accounts()
+        finally:
+            await app.stop()
 
     def main_menu(self):
-        """Menu utama aplikasi"""
         while True:
-            print(f"\n{Fore.CYAN}[HIYAOK] TELEGRAM MEMBER INVITE TOOL{Style.RESET_ALL}")
-            print(f"{Fore.GREEN}1. Tambah Akun{Style.RESET_ALL}")
-            print(f"{Fore.GREEN}2. Proses Invite Member{Style.RESET_ALL}")
-            print(f"{Fore.RED}3. Keluar{Style.RESET_ALL}")
+            print(f"\n{Fore.CYAN}=== Telegram Invite Tool ==={Style.RESET_ALL}")
+            print(f"{Fore.GREEN}1. Tambah Akun")
+            print("2. Proses Undangan Member")
+            print("3. Keluar{Style.RESET_ALL}")
 
             pilihan = input(f"{Fore.YELLOW}Pilih menu (1-3): {Style.RESET_ALL}")
 
             if pilihan == '1':
                 asyncio.run(self.add_account())
             elif pilihan == '2':
-                asyncio.run(self.invite_process())
+                asyncio.run(self.process_invite())
             elif pilihan == '3':
-                print(f"{Fore.RED}Keluar dari aplikasi...{Style.RESET_ALL}")
+                print(f"{Fore.CYAN}Sampai jumpa!{Style.RESET_ALL}")
                 break
             else:
-                print(f"{Fore.RED}Pilihan tidak valid!{Style.RESET_ALL}")
+                print(f"{Fore.RED}Pilihan tidak valid! Silakan coba lagi.{Style.RESET_ALL}")
+
 
 def main():
-    tool = TelegramMemberInviteTool()
+    tool = TelegramInviteTool()
     tool.main_menu()
+
 
 if __name__ == "__main__":
     main()
